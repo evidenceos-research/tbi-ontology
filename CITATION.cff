@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use the EvidenceOS TBI ontology bundle, please cite it using the metadata below."
+title: "EvidenceOS TBI Ontology Bundle"
+version: "2.0.0"
+date-released: 2026-02-15
+type: software
+authors:
+  - family-names: "EvidenceOS"
+    given-names: "Contributors"
+keywords:
+  - traumatic brain injury
+  - ontology
+  - TAPVI
+  - biomarkers
+  - neuroimaging
+license: Apache-2.0

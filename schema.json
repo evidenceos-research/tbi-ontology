@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evidenceos.org/schemas/tbi-ontology-bundle.schema.json",
+  "title": "EvidenceOS TBI Ontology Bundle Schema",
+  "description": "Per-file structural schemas for the six-module TBI ontology bundle.",
+  "$defs": {
+    "common_metadata": {
+      "type": "object",
+      "required": ["version", "last_updated"],
+      "properties": {
+        "version": { "type": "string" },
+        "last_updated": { "type": "string" },
+        "schema_contract": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "cbim_framework": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": ["channels", "severity_classification"],
+          "properties": {
+            "channels": {
+              "type": "object",
+              "required": ["clinical", "biomarker", "imaging", "modifier"]
+            },
+            "severity_classification": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "clinical_entities": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": ["gcs_components", "pediatric_gcs", "pta_tools", "confounders"],
+          "properties": {
+            "gcs_components": { "type": "object" },
+            "pediatric_gcs": { "type": "object" },
+            "pta_tools": { "type": "object" },
+            "confounders": { "type": "array" }
+          }
+        }
+      ]
+    },
+    "imaging_cdes": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": [
+            "schema_authority",
+            "temporal_phase_definitions",
+            "core_cdes",
+            "supplementary_cdes",
+            "classification_scores"
+          ],
+          "properties": {
+            "schema_authority": { "type": "string" },
+            "temporal_phase_definitions": { "type": "object" },
+            "core_cdes": { "type": "array" },
+            "supplementary_cdes": { "type": "array" },
+            "classification_scores": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "temporal_phases": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": ["source", "phases", "transition_criteria"],
+          "properties": {
+            "source": { "type": "string" },
+            "phases": { "type": "object" },
+            "transition_criteria": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": ["threshold_provenance", "rule_provenance", "audit_metadata"],
+          "properties": {
+            "threshold_provenance": { "type": "object" },
+            "rule_provenance": { "type": "object" },
+            "audit_metadata": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "implementation_science": {
+      "allOf": [
+        { "$ref": "#/$defs/common_metadata" },
+        {
+          "type": "object",
+          "required": ["deployment_contexts", "equity_considerations", "implementation_frameworks"],
+          "properties": {
+            "deployment_contexts": { "type": "object" },
+            "equity_considerations": { "type": "array" },
+            "implementation_frameworks": { "type": "object" }
+          }
+        }
+      ]
+    }
+  }
+}

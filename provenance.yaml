@@ -1,0 +1,148 @@
+# Provenance Ontology
+# Threshold provenance, rule sourcing, and audit trail metadata
+# Supports FDA PCCP compliance and evidence traceability
+
+version: "2.0.0"
+last_updated: "2026-02-15"
+
+schema_contract:
+  mapping_fields_optional: [fhir_observation_code, omop_concept_id, loinc_code]
+
+assay_platform_provenance:
+  abbott_i_stat_tbi_plasma:
+    platform: "Abbott i-STAT TBI Plasma Test"
+    analytes: [GFAP, UCH-L1]
+    regulatory_clearance: "FDA 510(k) K203170"
+    use_case: "Acute CT triage in mild TBI within intended sample window"
+    notes: "Canonical runtime thresholds in this stack are bound to this clearance context"
+
+  biomerieux_vidas_tbi:
+    platform: "bioMerieux VIDAS TBI"
+    analytes: [GFAP, UCH-L1]
+    regulatory_clearance: "FDA 510(k) (2024)"
+    use_case: "Lab-based/near-point-of-care biomarker-supported triage"
+    notes: "Platform included for provenance completeness; site-specific cutoffs should be validated before hard binding"
+
+  simoa_quanterix:
+    platform: "Quanterix Simoa HD-X / SR-X"
+    analytes: [GFAP, UCH-L1, NfL, total_tau, p-tau-217, S100B]
+    regulatory_clearance: "Research Use Only (RUO); CE-IVD for select assays in EU"
+    use_case: "Ultrasensitive research biomarker quantification; clinical study biobanking"
+    notes: >
+      Most published NfL and tau kinetics data in TBI literature derived from Simoa platform.
+      Sub-pg/mL sensitivity enables detection of mild TBI biomarker elevations.
+      Not a point-of-care device — requires laboratory infrastructure.
+    cross_ref: "temporal_phases.yaml#assay_platform_kinetics_context.simoa_quanterix"
+
+  elecsys_roche:
+    platform: "Roche Elecsys / cobas"
+    analytes: [NfL, p-tau-217]
+    regulatory_clearance: "CE-IVD (EU); FDA submission pathway in progress for select analytes"
+    use_case: "High-throughput clinical laboratory neurodegeneration biomarker panel"
+    notes: >
+      p-tau-217 on Elecsys has shown high concordance with PET amyloid/tau imaging.
+      Emerging TBI-specific validation. Primary use is neurodegeneration screening.
+    cross_ref: "temporal_phases.yaml#assay_platform_kinetics_context.elecsys_roche"
+
+threshold_provenance:
+  gfap_ct_threshold:
+    value: 30.0
+    unit: "pg/mL"
+    direction: ">="
+    source: "Abbott i-STAT TBI Plasma Test"
+    regulatory_clearance: "FDA 510(k) K203170"
+    evidence_level: "Class II medical device clearance"
+    references:
+      - "Bazarian JJ et al. Lancet Neurol 2021"
+      - "NINDS TBI Common Data Elements v3"
+    last_validated: "2026-02-15"
+    applies_to: ["adult", "mild_tbi"]
+    notes: "12-hour sample window from injury for optimal sensitivity"
+
+  uchl1_ct_threshold:
+    value: 360.0
+    unit: "pg/mL"
+    direction: ">="
+    source: "Abbott i-STAT TBI Plasma Test"
+    regulatory_clearance: "FDA 510(k) K203170"
+    evidence_level: "Class II medical device clearance"
+    references:
+      - "Bazarian JJ et al. Lancet Neurol 2021"
+      - "NINDS TBI Common Data Elements v3"
+    last_validated: "2026-02-15"
+    applies_to: ["adult", "mild_tbi"]
+
+  icp_treatment_threshold:
+    value: 22.0
+    unit: "mmHg"
+    direction: ">"
+    source: "Brain Trauma Foundation Guidelines 4th Edition"
+    evidence_level: "Level IIB recommendation"
+    references:
+      - "Carney N et al. Neurosurgery 2017"
+    last_validated: "2026-02-15"
+
+  cpp_critical_threshold:
+    value: 60.0
+    unit: "mmHg"
+    direction: "<"
+    source: "Brain Trauma Foundation Guidelines 4th Edition"
+    evidence_level: "Level IIB recommendation"
+    references:
+      - "Carney N et al. Neurosurgery 2017"
+    last_validated: "2026-02-15"
+
+  pbto2_hypoxia_threshold:
+    value: 20.0
+    unit: "mmHg"
+    direction: "<"
+    source: "BOOST-3 Trial / BTF Guidelines"
+    evidence_level: "Level III recommendation"
+    references:
+      - "Okonkwo DO et al. Lancet 2024"
+    last_validated: "2026-02-15"
+
+  sbp_hypotension_threshold:
+    value: 90.0
+    unit: "mmHg"
+    direction: "<"
+    source: "ATLS / BTF Guidelines"
+    evidence_level: "Level III recommendation"
+    references:
+      - "Brain Trauma Foundation 2016"
+    last_validated: "2026-02-15"
+
+rule_provenance:
+  ccr_candidate_generation:
+    source: "EvidenceOS CCR Engine v2.0"
+    method: "Rule-based candidate generation with physiological constraint validation"
+    audit_fields:
+      - reasoning_trace
+      - temporal_phase
+      - constraint_violations
+      - candidate_scores
+
+  bridge_tbi_inference:
+    source: "BRIDGE-TBI CBI-M Model v2.0"
+    method: "Multi-channel risk scoring with biomarker threshold gating"
+    fda_compliance:
+      model_run_logging: true
+      clinician_override_tracking: true
+      outcome_verification: true
+      feedback_loop_triggers: true
+
+audit_metadata:
+  required_fields:
+    - model_name
+    - model_version
+    - timestamp
+    - input_hash
+    - output_hash
+    - clinician_id
+    - facility_id
+  optional_fields:
+    - override_reason
+    - clinical_context
+    - patient_factors
+    - outcome_verified
+    - outcome_correct

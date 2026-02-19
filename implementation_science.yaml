@@ -1,0 +1,139 @@
+# Implementation Science & Psychosocial Ontology
+# Deployment context, equity considerations, and implementation frameworks
+# Aligned with RE-AIM and CFIR frameworks
+
+version: "2.0.0"
+last_updated: "2026-02-15"
+
+schema_contract:
+  mapping_fields_optional: [fhir_location_code, omop_concept_id, who_service_delivery_code]
+  canonical_context_ids: [hic_academic, hic_community, lmic_urban, lmic_rural, military_austere]
+
+standards_mapping_hooks:
+  deployment_profile_template:
+    fhir_location_code: null
+    omop_concept_id: null
+    who_service_delivery_code: null
+  note: "Populate site-specific mappings during implementation profiling"
+
+deployment_contexts:
+  hic_academic:
+    id: "hic_academic"
+    label: "High-Income Country Academic Center"
+    characteristics:
+      ct_available: true
+      mri_available: true
+      biomarker_available: true
+      icu_available: true
+      neurosurgery_available: true
+      ehr_integration: true
+    model_configuration:
+      imaging_weight: "standard"
+      biomarker_role: "complementary"
+      override_expected_rate: "5-15%"
+
+  hic_community:
+    id: "hic_community"
+    label: "High-Income Country Community Hospital"
+    characteristics:
+      ct_available: true
+      mri_available: "limited"
+      biomarker_available: "emerging"
+      icu_available: true
+      neurosurgery_available: "transfer_required"
+      ehr_integration: "variable"
+    model_configuration:
+      imaging_weight: "standard"
+      biomarker_role: "triage_support"
+      transfer_decision_support: true
+
+  lmic_urban:
+    id: "lmic_urban"
+    label: "LMIC Urban Hospital"
+    characteristics:
+      ct_available: "limited"
+      mri_available: "rare"
+      biomarker_available: "pilot"
+      icu_available: "limited"
+      neurosurgery_available: "limited"
+      ehr_integration: false
+    model_configuration:
+      imaging_weight: "reduced"
+      biomarker_role: "primary_triage"
+      clinical_exam_weight: "elevated"
+
+  lmic_rural:
+    id: "lmic_rural"
+    label: "LMIC Rural/District Hospital"
+    characteristics:
+      ct_available: false
+      mri_available: false
+      biomarker_available: false
+      icu_available: false
+      neurosurgery_available: false
+      ehr_integration: false
+    model_configuration:
+      imaging_weight: "unavailable"
+      biomarker_role: "unavailable"
+      clinical_exam_weight: "primary"
+      referral_decision_support: true
+
+  military_austere:
+    id: "military_austere"
+    label: "Military/Austere Environment"
+    characteristics:
+      ct_available: false
+      mri_available: false
+      biomarker_available: "point_of_care"
+      icu_available: false
+      neurosurgery_available: false
+    model_configuration:
+      biomarker_role: "sole_objective_measure"
+      evacuation_decision_support: true
+
+equity_considerations:
+  - id: geographic_equity
+    label: "Geographic Equity"
+    description: "Model must degrade gracefully when imaging unavailable"
+    implementation: "CBI-M channel weighting adapts to available inputs"
+
+  - id: age_equity
+    label: "Age Equity"
+    description: "Geriatric and pediatric pathways with adjusted thresholds"
+    implementation: "Age-stratified threshold profiles (future WS)"
+
+  - id: language_equity
+    label: "Language Equity"
+    description: "Explanations available in local languages"
+    implementation: "ccr-explain supports multilingual templates"
+
+  - id: resource_equity
+    label: "Resource Equity"
+    description: "Decision support useful even without advanced diagnostics"
+    implementation: "Clinical-only pathway when biomarkers/imaging unavailable"
+
+implementation_frameworks:
+  re_aim:
+    reach: "Number of facilities and clinicians using BRIDGE-TBI"
+    effectiveness: "Override rate, outcome concordance, time-to-decision"
+    adoption: "Facility onboarding rate, training completion"
+    implementation: "Fidelity to recommended workflows, integration depth"
+    maintenance: "Sustained usage at 6/12 months, feedback loop activity"
+
+  cfir:
+    intervention_characteristics:
+      - "Evidence-based biomarker thresholds"
+      - "Transparent reasoning trace"
+      - "Clinician override capability"
+    outer_setting:
+      - "Regulatory landscape (FDA PCCP, CE Mark)"
+      - "Guideline alignment (BTF, NINDS)"
+    inner_setting:
+      - "Facility IT infrastructure"
+      - "Clinical workflow integration"
+    individuals:
+      - "Clinician trust calibration"
+      - "Training and onboarding"
+    process:
+      - "Phased rollout (pilot -> validation -> deployment)"
+      - "Continuous monitoring via feedback loops"

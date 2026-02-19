@@ -1,0 +1,1010 @@
+# =============================================================================
+# NINDS TBI Neuroimaging Common Data Elements
+# Source: WG2 Neuroimaging Working Group (MacDonald et al., Draft 20240115)
+# =============================================================================
+#
+# IMPORTANT: This schema is derived from the NINDS TBI Reclassification
+# Working Group 2 (Neuroimaging Characterization) source document.
+# All definitions, terminology, and structure follow WG2 exactly.
+#
+# EvidenceOS-specific extensions (deployment context, ML pipeline outputs)
+# are separated into a clearly labeled namespace at the end of this file.
+# They are NOT attributed to the NINDS working group.
+#
+# TERMINOLOGY NOTE: The term "DAI" (Diffuse Axonal Injury) is DEPRECATED
+# per WG2. The correct term is TAPVI (Traumatic Axonal and/or Punctate
+# Cerebrovascular Injury). See CDE #10 below.
+#
+# Reference: Mac Donald CL, Yuh EL, et al. J Neurotrauma 2025;42(13-14):1056-1064.
+# DOI: 10.1089/neu.2025.0079
+
+version: "3.0.0"
+last_updated: "2026-02-15"
+source_document: "Mac Donald CL, Yuh EL, et al. J Neurotrauma 2025;42(13-14):1056-1064"
+doi: "10.1089/neu.2025.0079"
+pmid: "40393517"
+schema_authority: "NINDS TBI Reclassification Working Group 2"
+
+schema_contract:
+  mapping_fields_optional: [radlex_id, dicom_sr_code, fhir_observation_code, omop_concept_id]
+  canonical_phase_ids: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+
+standards_mapping_hooks:
+  default_mapping_template:
+    radlex_id: null
+    dicom_sr_code: null
+    fhir_observation_code: null
+    omop_concept_id: null
+  note: "Populate per-CDE mappings during site implementation or profile binding"
+
+# -----------------------------------------------------------------------------
+# CONFIDENCE GRADING (applies to every CDE)
+# -----------------------------------------------------------------------------
+confidence_options:
+  - is_present
+  - might_be_present
+  - not_present
+
+# -----------------------------------------------------------------------------
+# TEMPORAL PHASES (WG2 Table XX)
+# Each CDE maps to one or more phases indicating clinical relevance windows
+# -----------------------------------------------------------------------------
+temporal_phase_definitions:
+  acute_0_24h:
+    label: "Acute Assessment"
+    range_hours: [0, 24]
+  subacute_1_30d:
+    label: "Primary Recovery / Subacute"
+    range_days: [1, 30]
+  initial_outcome_30d_12m:
+    label: "Initial Outcome"
+    range_months: [1, 12]
+  late_effects_gt1y:
+    label: "Late Effects of Neurotrauma"
+    range: ">1 year"
+
+# -----------------------------------------------------------------------------
+# IMAGING MODALITY FRAMEWORK (WG2 Appendix XX)
+# -----------------------------------------------------------------------------
+imaging_modalities:
+  ct:
+    types:
+      - noncontrast
+      - postcontrast
+      - ct_angiography
+      - ct_venography
+      - ct_perfusion
+    metadata:
+      - manufacturer
+      - model
+      - software_version
+      - slice_thickness_mm
+
+  mri:
+    field_strengths: ["1.5T", "3T"]
+    sequences:
+      - T1
+      - post_contrast_T1
+      - T2
+      - FLAIR
+      - DWI
+      - T2_star_GRE
+      - SWI_SWAN
+      - QSM
+      - TOF_MRA
+      - contrast_MRA
+      - TOF_MRV
+      - diffusion_MRI
+      - ASL
+      - DCE
+      - DSC
+      - task_fMRI
+      - resting_state_fMRI
+      - MR_spectroscopy
+    metadata:
+      - manufacturer
+      - model
+      - field_strength
+      - software_version
+
+# -----------------------------------------------------------------------------
+# LATERALITY SCHEMA (reused across CDEs)
+# -----------------------------------------------------------------------------
+laterality_options: ["right", "left", "bilateral", "midline", "not_applicable"]
+
+# -----------------------------------------------------------------------------
+# 3-TIER CDE SYSTEM
+# Tier structure per WG2:
+#   Core (Primary): 9 CDEs — minimum data for all patients (presence only)
+#   Supplementary:  18 CDEs — location, size, distribution, severity
+#   Emerging:       Evolving — morphology subtypes, advanced markers
+# -----------------------------------------------------------------------------
+
+# =============================================================================
+# CORE (PRIMARY) CDEs — 9 CDEs, required for ALL patients
+# =============================================================================
+core_cdes:
+
+  # CDE 1: No Evidence of Acute Injury
+  - id: no_acute_injury
+    label: "No Evidence of Acute Traumatic Injury"
+    tier: primary
+    temporal_phases: [acute_0_24h]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      No acute traumatic intracranial or calvarial abnormality identified
+      on the imaging study. Does not exclude pre-existing or incidental findings.
+    core_fields:
+      presence: true
+    supplementary_fields: null
+    emerging_fields: null
+
+  # CDE 2: Acute Scalp Trauma
+  - id: acute_scalp_trauma
+    label: "Acute Scalp Trauma"
+    tier: primary
+    temporal_phases: [acute_0_24h]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Soft tissue swelling, laceration, or hematoma of the scalp
+      identified on imaging. Indicator of impact site.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, parietal, temporal, occipital]
+        laterality: [right, left, bilateral, midline]
+      type: [swelling, laceration, hematoma, cephalohematoma]
+    emerging_fields: null
+
+  # CDE 3: Acute Cranial Fracture
+  - id: acute_cranial_fracture
+    label: "Acute Cranial Fracture"
+    tier: primary
+    temporal_phases: [acute_0_24h]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Disruption of the calvarium or skull base identified on imaging.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      morphology:
+        - linear
+        - depressed
+        - comminuted
+        - diastatic
+        - growing
+        - basilar
+        - open_compound
+      location_vault:
+        regions: [frontal, parietal, temporal, occipital]
+        laterality: [right, left, bilateral]
+      location_base:
+        regions: [anterior_fossa, middle_fossa, posterior_fossa]
+        laterality: [right, left, bilateral]
+    emerging_fields:
+      associated_findings: [pneumocephalus, CSF_leak, vascular_injury]
+
+  # CDE 4: Epidural Hematoma
+  - id: epidural_hematoma
+    label: "Epidural Hematoma (EDH)"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Collection of blood between the inner table of the skull and the
+      dura mater. Typically biconvex/lenticular shape. Often associated
+      with skull fracture and middle meningeal artery injury.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, parietal, temporal, occipital, posterior_fossa]
+        laterality: [right, left, bilateral]
+      size:
+        max_thickness_mm: null
+        volume_mL: null
+      density: [hyperdense, mixed_density, isodense]
+    emerging_fields:
+      active_extravasation: [present, absent]
+      arterial_vs_venous: [arterial, venous, mixed]
+    prognostic_clusters:
+      - gcs_range: [12, 15]
+        association: "Associated with incomplete recovery"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [acute_cranial_fracture, midline_shift]
+
+  # CDE 5: Subdural Hematoma
+  - id: subdural_hematoma
+    label: "Subdural Hematoma (SDH)"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Collection of blood between the dura mater and the arachnoid membrane.
+      Typically crescent-shaped, conforming to brain surface.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions:
+          - frontal
+          - parietal
+          - temporal
+          - occipital
+          - interhemispheric_supratentorial_anterior
+          - interhemispheric_supratentorial_posterior
+          - tentorial
+          - posterior_fossa
+          - interhemispheric_infratentorial
+        laterality: [right, left, bilateral]
+      size:
+        max_thickness_mm: null
+        volume_mL: null
+      density: [hyperdense, mixed_density, isodense, hypodense]
+      acuity: [acute, subacute, chronic, mixed_acuity]
+    emerging_fields:
+      membrane_formation: [present, absent]
+    prognostic_clusters:
+      - gcs_range: [13, 15]
+        association: "Often co-occurring with contusion and tSAH; associated with incomplete recovery"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [contusion, traumatic_subarachnoid_hemorrhage]
+
+  # CDE 6: Extraaxial Hematoma (not otherwise specified)
+  - id: extraaxial_hematoma
+    label: "Extraaxial Hematoma (Not Otherwise Specified)"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Collection of blood in the extraaxial space that cannot be definitively
+      classified as epidural or subdural based on available imaging.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, parietal, temporal, occipital, posterior_fossa]
+        laterality: [right, left, bilateral]
+      size:
+        max_thickness_mm: null
+    emerging_fields: null
+
+  # CDE 7: Traumatic Subarachnoid Hemorrhage
+  - id: traumatic_subarachnoid_hemorrhage
+    label: "Traumatic Subarachnoid Hemorrhage (tSAH)"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Blood within the subarachnoid space resulting from trauma.
+      Distinct from aneurysmal SAH in distribution pattern.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      distribution:
+        - convexity_sulci
+        - sylvian_fissure
+        - basal_cisterns
+        - interhemispheric_fissure
+        - posterior_fossa
+      laterality: [right, left, bilateral]
+      severity: [trace, moderate, extensive]
+    emerging_fields:
+      vasospasm_risk: [low, moderate, high]
+    prognostic_clusters:
+      - gcs_range: [13, 15]
+        association: "Often co-occurring with contusion and SDH; associated with incomplete recovery"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [contusion, subdural_hematoma]
+
+  # CDE 8: Intraventricular Hemorrhage
+  - id: intraventricular_hemorrhage
+    label: "Intraventricular Hemorrhage (IVH)"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Blood within the ventricular system. May be primary (direct injury)
+      or secondary (extension from parenchymal hemorrhage).
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        - lateral_ventricle_right
+        - lateral_ventricle_left
+        - third_ventricle
+        - fourth_ventricle
+      severity: [trace, moderate, casting]
+      hydrocephalus: [present, absent]
+    emerging_fields:
+      requires_evd: [yes, no, uncertain]
+    prognostic_clusters:
+      - gcs_range: [13, 15]
+        association: "Often co-occurring with petechial intraparenchymal hemorrhage; associated with more severe impairment"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [intracerebral_hemorrhage, tapvi]
+
+  # CDE 9: Contusion
+  - id: contusion
+    label: "Cerebral Contusion"
+    tier: primary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Focal area of brain parenchymal injury, typically at the cortical
+      surface, often at coup and contrecoup sites. May be hemorrhagic
+      or non-hemorrhagic.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, temporal, parietal, occipital, cerebellar]
+        laterality: [right, left, bilateral]
+        surface: [cortical, subcortical]
+      size:
+        max_diameter_mm: null
+        volume_mL: null
+      hemorrhagic_component: [hemorrhagic, non_hemorrhagic, mixed]
+      number: [single, multiple]
+    emerging_fields:
+      contusion_expansion_risk: [low, moderate, high]
+      perilesional_edema: [present, absent]
+    prognostic_clusters:
+      - gcs_range: [13, 15]
+        association: "Often co-occurring with SDH and tSAH; associated with incomplete recovery"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [subdural_hematoma, traumatic_subarachnoid_hemorrhage, acute_cranial_fracture]
+
+# =============================================================================
+# SUPPLEMENTARY CDEs — characterize findings in detail
+# =============================================================================
+supplementary_cdes:
+
+  # CDE 10: TAPVI — Traumatic Axonal and/or Punctate Cerebrovascular Injury
+  # NOTE: This replaces the DEPRECATED terms DAI, TAI, shear injury,
+  # petechial hemorrhages, punctate hemorrhage, traumatic vascular injury,
+  # traumatic microbleeds, microhemorrhages, and gliding contusion.
+  #
+  # Key evidence for terminology change:
+  #   - Mittenzwei et al. 2024 (preprint): 36% of MRI microbleeds lack axonal injury (n=3 brains, 44 microbleeds)
+  #   - Griffin et al. 2019 (Brain): TMBs represent vascular injury independently of axonal damage (n=439 clinical, n=1 autopsy)
+  #   - Haber et al. 2021 (JCBFM): Vascular and axonal injury are spatially distinct endophenotypes (9-10% voxel overlap, n=27)
+  #   - Dahl, Tenovuo et al. 2022 (Frontiers Neurol): CMB-WM correlation vanishes after GCS/PTA adjustment (n=65)
+  #
+  # Classification validation evidence (distribution ordinal):
+  #   - Adams JH et al. 1989 (Ann Neurol): Original grading — NEVER validated for MRI (Bruggeman/Volovici 2021)
+  #   - Tjerkaski et al. 2022 (n=351): Stockholm grade I-IV; unfavorable outcome I=28%, II=40%, III=74%, IV=97%
+  #   - Moen et al. 2024 (n=463): Trondheim grading; volumetric models (R2 0.19-0.21) > categorical (0.16-0.19)
+  #   - Moen et al. 2014 (n=128): DWI/FLAIR lesion load independently predicts outcome; T2*GRE count does NOT
+  #   - Bruggeman, Volovici 2021: Systematic review confirming Adams classification never validated for in-vivo MRI
+  - id: tapvi
+    label: "Traumatic Axonal and/or Punctate Cerebrovascular Injury (TAPVI)"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Constellation of imaging findings in subcortical and deeper brain
+      regions, most often associated with inertial forces (strain, shear,
+      angular deceleration). Mixed pathology: some punctate MRI lesions
+      are purely punctate cerebrovascular injury, some are cerebrovascular + axonal
+      injury, some are congested vessels. This is why caution is urged
+      in calling them "DAI" or "TAI".
+    deprecated_terms:
+      - "Diffuse Axonal Injury (DAI)"
+      - "Traumatic Axonal Injury (TAI)"
+      - "Petechial hemorrhages"
+      - "Punctate hemorrhage"
+      - "Shear injury"
+      - "Traumatic vascular injury"
+      - "Traumatic microbleeds"
+      - "Microhemorrhages"
+      - "Gliding contusion"
+    core_fields:
+      presence: true
+    supplementary_fields:
+      ct_appearance: >
+        Hyperdense foci or curvilinear lesions in subcortical white matter
+        (frontal > parietal > temporal), corpus callosum, basal ganglia,
+        fornix, brainstem.
+      mri_appearance: >
+        Foci or curvilinear areas of susceptibility artifact on T2*-weighted
+        GRE, SWI, SWAN, or QSM. Typically 5-10mm diameter. Often with
+        surrounding T2/FLAIR hyperintensity. Within 24-48h, often show
+        reduced diffusion on DWI/ADC.
+      preferred_sequences: [T2_star_GRE, SWI_SWAN, QSM, DWI, FLAIR]
+      location_matrix:
+        subcortical_lobar:
+          regions: [frontal, parietal, temporal, occipital]
+          laterality: [right, left]
+          confidence_per_sequence: true
+        deep_white_matter:
+          regions:
+            - corona_radiata
+            - centrum_semiovale
+            - internal_capsule_anterior_limb
+            - internal_capsule_posterior_limb
+            - external_capsule
+          laterality: [right, left]
+        corpus_callosum:
+          segments: [genu, body, splenium, rostrum]
+          laterality: [right, left, midline]
+        basal_ganglia:
+          nuclei: [caudate, putamen, globus_pallidus, thalamus]
+          laterality: [right, left]
+        brainstem:
+          segments: [midbrain, pons, medulla]
+          laterality: [right, left, midline]
+        cerebellum:
+          regions: [hemisphere, vermis, peduncle]
+          laterality: [right, left, midline]
+        other:
+          regions: [fornix, hypothalamus, septum_pellucidum]
+      distribution: [focal_scant, moderate, widespread]
+    emerging_fields:
+      hemorrhagic_vs_nonhemorrhagic: [hemorrhagic, non_hemorrhagic, mixed]
+      quantitative_lesion_count: null
+      quantitative_lesion_volume_mL: null
+    clinical_significance: >
+      Scant/focal TAPVI can occur in well-appearing patients. Widespread
+      lesions often correlate with significant neurologic deficits,
+      particularly acutely.
+    prognostic_clusters:
+      - gcs_range: [13, 15]
+        association: "Petechial intraparenchymal hemorrhage (TAPVI) often co-occurring with IVH; associated with more severe impairment"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [intraventricular_hemorrhage, contusion]
+
+    # Structured evidence registry for TAPVI CDE
+    evidence_registry:
+      terminology_change:
+        - citation: "Mittenzwei J et al. 2024 (preprint)"
+          finding: "36% of SWI microbleeds lack APP-positive axonal injury on histopath"
+          n: 3
+          n_unit: "brains (44 microbleeds)"
+          limitation: "Preprint; n=3; brainstem excluded; poorly described registration"
+          strength: "First systematic co-registration of ex-vivo MRI with histopath at microbleed sites"
+        - citation: "Griffin AD et al. Brain 2019;142(11):3397-3413"
+          finding: "TMBs represent vascular injury (iron-laden perivascular macrophages) independently of axonal damage"
+          n: 439
+          n_unit: "clinical cohort (1 autopsy)"
+          limitation: "Histopath claim rests on single autopsy case"
+          strength: "Large clinical cohort; TMBs predict disability (OR 2.5 independent of GCS/CT)"
+        - citation: "Haber M et al. J Cereb Blood Flow Metab 2021;41(10):2657-2671"
+          finding: "CVR-MD overlap ~9-10%; CBF-FA overlap 0%; vascular and axonal injury are spatially distinct"
+          n: 27
+          n_unit: "chronic TBI patients + 14 controls"
+          limitation: "Chronic only (median 23 months); DTI only 12 directions"
+          strength: "Multi-modal approach; demonstrates endophenotype separation"
+        - citation: "Dahl BT, Tenovuo O et al. Frontiers in Neurology 2022"
+          finding: "CMB grading correlation with WM microstructure (FA) vanishes after adjusting for GCS and PTA"
+          n: 65
+          n_unit: "subjects (20 TBI with CMBs, 34 without, 11 ortho controls)"
+          limitation: "Moderate sample size"
+          strength: "Directly demonstrates confounding by severity; Tenovuo's own group"
+      classification_validation:
+        - citation: "Adams JH et al. Ann Neurol 1989;12(6):557-563"
+          finding: "Original three-grade DAI classification based on autopsy"
+          status: "NEVER validated for in-vivo MRI (see Bruggeman/Volovici 2021)"
+        - citation: "Bruggeman GF, Volovici V et al. 2021"
+          finding: "Systematic review confirming Adams classification has no MRI validation study"
+          implication: "All MRI-based 'Adams grading' in clinical practice is extrapolated without evidence"
+        - citation: "Tjerkaski J et al. 2022 (n=351)"
+          finding: "Stockholm grade I-IV: unfavorable outcome I=28%, II=40%, III=74%, IV=97%"
+          strength: "Largest single-center Stockholm validation; clear dose-response"
+          limitation: "Internal validation only; DeLong test vs Adams non-significant"
+        - citation: "Moen KG et al. 2024 (n=463)"
+          finding: "Volumetric models (pseudo-R2 0.19-0.21) outperform categorical grading (0.16-0.19)"
+          strength: "Largest Trondheim grading study; supports continuous over categorical"
+          limitation: "Internal validation only; improvement modest; 'promising for future use of AI'"
+        - citation: "Moen KG et al. 2014 (n=128)"
+          finding: "DWI/FLAIR lesion load in CC independently predicted outcome; T2*GRE lesion counts did NOT"
+          implication: "Hemorrhagic vs non-hemorrhagic markers have different prognostic value"
+      distribution_ordinal_validation:
+        field: "distribution: [focal_scant, moderate, widespread]"
+        status: "WG2 expert consensus — NO published paper validates this specific three-level ordinal"
+        supporting_dose_response:
+          - "Tjerkaski 2022: Stockholm I-IV shows monotonic unfavorable outcome increase"
+          - "Moen 2024: Continuous volume outperforms categories"
+          - "Griffin 2019: TMB presence (binary) OR 2.5 for disability"
+        validation_needed:
+          - "Define count/volume thresholds for scant vs moderate vs widespread"
+          - "Show monotonic outcome increase across three levels"
+          - "Show three-level outperforms binary (present/absent) in multivariate model"
+          - "External validation in independent cohort"
+        proposed_validation:
+          derivation_cohort: "TBIcare (n=280, via Posti/Tenovuo)"
+          validation_cohort: "CENTER-TBI MRI subset"
+          paper: "Validation of a Three-Level TAPVI Distribution Ordinal for TBI Outcome Prediction"
+
+  # CDE 11: Intracerebral Hemorrhage
+  - id: intracerebral_hemorrhage
+    label: "Intracerebral Hemorrhage"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Focal collection of blood within the brain parenchyma, distinct
+      from hemorrhagic contusion by size, depth, and morphology.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, parietal, temporal, occipital, basal_ganglia, thalamus, brainstem, cerebellum]
+        laterality: [right, left]
+      size:
+        max_diameter_mm: null
+        volume_mL: null
+    emerging_fields:
+      hematoma_expansion: [present, absent, uncertain]
+    related_cdes: [contusion, intraventricular_hemorrhage]
+
+  # CDE 12: Midline Shift
+  - id: midline_shift
+    label: "Midline Shift"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Displacement of midline brain structures (septum pellucidum,
+      third ventricle, pineal gland) from their normal position.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      measurement_mm: null
+      direction: [right_to_left, left_to_right]
+      measurement_level: [septum_pellucidum, pineal, other]
+    emerging_fields: null
+    prognostic_clusters:
+      - gcs_range: [3, 12]
+        association: "Often co-occurring with basal cistern compression; associated with more severe impairment"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [downward_cerebral_herniation, brain_swelling]
+
+  # CDE 13: Downward Cerebral Herniation
+  - id: downward_cerebral_herniation
+    label: "Downward Cerebral Herniation"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Displacement of brain tissue through the tentorial notch (transtentorial)
+      or other dural openings due to mass effect.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      type: [uncal, central, subfalcine, ascending_transtentorial]
+      laterality: [right, left, bilateral]
+      severity: [mild, moderate, severe]
+    emerging_fields: null
+    related_cdes: [midline_shift, brain_swelling, epidural_hematoma, subdural_hematoma]
+
+  # CDE 14: Cerebellar Herniation / 4th Ventricle Compression
+  - id: cerebellar_herniation
+    label: "Cerebellar Herniation / Fourth Ventricle Compression"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Downward displacement of cerebellar tonsils through the foramen
+      magnum, or upward herniation through the tentorial notch, with
+      compression of the fourth ventricle.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      type: [tonsillar, upward]
+      fourth_ventricle: [normal, compressed, effaced]
+    emerging_fields: null
+    related_cdes: [downward_cerebral_herniation, brain_swelling]
+
+  # CDE 15: Brain Swelling / Acute Edema
+  - id: brain_swelling
+    label: "Brain Swelling / Acute Edema"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Diffuse or focal increase in brain volume due to edema (vasogenic
+      or cytotoxic) or hyperemia. Manifests as sulcal effacement,
+      ventricular compression, and cistern obliteration.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      distribution: [diffuse, hemispheric, focal]
+      laterality: [right, left, bilateral]
+      cistern_status: [normal, compressed, absent]
+      sulcal_effacement: [present, absent]
+    emerging_fields:
+      edema_type: [vasogenic, cytotoxic, mixed]
+    related_cdes: [midline_shift, downward_cerebral_herniation]
+
+  # CDE 16: Ischemia / Infarction / Hypoxic-Ischemic Injury
+  - id: ischemia_infarction
+    label: "Ischemia / Infarction / Hypoxic-Ischemic Injury"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Focal or diffuse ischemic injury to brain parenchyma, which may
+      be due to vascular injury, herniation, or systemic hypotension/hypoxia.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      distribution: [territorial, watershed, diffuse]
+      vascular_territory: [ACA, MCA, PCA, basilar, other]
+      laterality: [right, left, bilateral]
+    emerging_fields:
+      dwi_restriction: [present, absent]
+      hemorrhagic_transformation: [present, absent]
+    related_cdes: [arterial_dissection, downward_cerebral_herniation]
+
+  # CDE 17: Penetrating Injuries
+  - id: penetrating_injury
+    label: "Penetrating Injury"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Injury in which a foreign object or bone fragment penetrates the
+      dura and enters the intracranial space.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      type: [gunshot_wound, stab, bone_fragment, other_foreign_body]
+      trajectory: null
+      retained_fragments: [present, absent]
+      location:
+        entry_site:
+          region: [frontal, parietal, temporal, occipital, facial]
+          laterality: [right, left, midline]
+    emerging_fields:
+      vascular_injury_associated: [present, absent, uncertain]
+    related_cdes: [acute_cranial_fracture, intracerebral_hemorrhage]
+
+  # CDE 18: Arterial Dissection
+  - id: arterial_dissection
+    label: "Traumatic Arterial Dissection"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Tear in the arterial wall (intima or media) of a cervical or
+      intracranial artery resulting from trauma.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      vessel: [internal_carotid, vertebral, MCA, ACA, PCA, basilar, other]
+      laterality: [right, left, bilateral]
+      grade: [stenosis, occlusion, pseudoaneurysm]
+    emerging_fields:
+      anticoagulation_indicated: [yes, no, uncertain]
+    related_cdes: [ischemia_infarction, traumatic_pseudoaneurysm]
+
+  # CDE 19: Traumatic Pseudoaneurysm
+  - id: traumatic_pseudoaneurysm
+    label: "Traumatic Pseudoaneurysm"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Focal outpouching of an arterial wall resulting from traumatic
+      disruption, contained by adventitia or surrounding tissue.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      vessel: [internal_carotid, vertebral, MCA, ACA, PCA, other]
+      laterality: [right, left]
+      size_mm: null
+    emerging_fields: null
+    related_cdes: [arterial_dissection, penetrating_injury]
+
+  # CDE 20: Venous Sinus Injury
+  - id: venous_sinus_injury
+    label: "Venous Sinus Injury"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Injury to a dural venous sinus, including thrombosis, laceration,
+      or compression.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      sinus: [superior_sagittal, transverse, sigmoid, straight, confluence]
+      laterality: [right, left, midline]
+      type: [thrombosis, laceration, compression]
+    emerging_fields: null
+    related_cdes: [acute_cranial_fracture, epidural_hematoma]
+
+  # CDE 21: Pneumocephalus
+  - id: pneumocephalus
+    label: "Pneumocephalus"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Presence of air within the intracranial cavity, typically
+      associated with skull base fracture or open fracture.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location: [epidural, subdural, subarachnoid, intraventricular, intraparenchymal]
+      tension: [simple, tension]
+    emerging_fields: null
+    related_cdes: [acute_cranial_fracture]
+
+  # CDE 22: Basal Cistern Status
+  - id: basal_cistern_status
+    label: "Basal Cistern Status"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Status of the basal (perimesencephalic) cisterns as an indicator
+      of intracranial pressure and mass effect.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      status: [normal, compressed, absent]
+    emerging_fields: null
+    prognostic_clusters:
+      - gcs_range: [3, 12]
+        association: "Often co-occurring with midline shift; associated with more severe impairment"
+        evidence: "TRACK-TBI/CENTER-TBI"
+    related_cdes: [midline_shift, brain_swelling, downward_cerebral_herniation]
+
+  # CDE 23: Non-Acute Intracranial Hematoma
+  - id: non_acute_hematoma
+    label: "Non-Acute Intracranial Hematoma"
+    tier: supplementary
+    temporal_phases: [subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Intracranial hematoma that has evolved beyond the acute phase,
+      showing density changes on CT or signal evolution on MRI.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      type: [chronic_subdural, subacute_subdural, hygroma]
+      location:
+        regions: [frontal, parietal, temporal, occipital, posterior_fossa]
+        laterality: [right, left, bilateral]
+      size:
+        max_thickness_mm: null
+    emerging_fields:
+      membrane_formation: [present, absent]
+    related_cdes: [subdural_hematoma]
+
+  # CDE 24: Mixed Density Subdural Collection / CSF Collection
+  - id: mixed_density_subdural
+    label: "Mixed Density Subdural / CSF Collection"
+    tier: supplementary
+    temporal_phases: [subacute_1_30d, initial_outcome_30d_12m]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Subdural collection with mixed density components, suggesting
+      recurrent hemorrhage into a chronic collection, or subdural
+      hygroma with hemorrhagic component.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, parietal, temporal, occipital]
+        laterality: [right, left, bilateral]
+      components: [blood, CSF, mixed]
+    emerging_fields: null
+    related_cdes: [non_acute_hematoma, subdural_hematoma]
+
+  # CDE 25: Focal Encephalomalacia
+  - id: focal_encephalomalacia
+    label: "Focal Encephalomalacia"
+    tier: supplementary
+    temporal_phases: [initial_outcome_30d_12m, late_effects_gt1y]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Focal area of brain tissue loss/softening representing the chronic
+      sequela of prior contusion, hemorrhage, infarction, or surgical
+      intervention.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location:
+        regions: [frontal, temporal, parietal, occipital, cerebellar, brainstem]
+        laterality: [right, left, bilateral]
+      associated_gliosis: [present, absent]
+      ex_vacuo_dilation: [present, absent]
+    emerging_fields:
+      volume_mL: null
+    related_cdes: [contusion, intracerebral_hemorrhage, ischemia_infarction]
+
+  # CDE 26: Brain Atrophy
+  - id: brain_atrophy
+    label: "Brain Atrophy"
+    tier: supplementary
+    temporal_phases: [initial_outcome_30d_12m, late_effects_gt1y]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Generalized or focal loss of brain volume beyond that expected
+      for age, assessed by ventricular enlargement and sulcal widening.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      distribution: [generalized, focal, hemispheric]
+      severity: [mild, moderate, severe]
+      laterality: [right, left, bilateral, symmetric]
+    emerging_fields:
+      quantitative_brain_volume_mL: null
+      age_adjusted_percentile: null
+    related_cdes: [focal_encephalomalacia]
+
+  # CDE 27: Enlarged Perivascular Spaces
+  - id: enlarged_perivascular_spaces
+    label: "Enlarged Perivascular Spaces"
+    tier: supplementary
+    temporal_phases: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+    confidence: [is_present, might_be_present, not_present]
+    definition: >
+      Dilated perivascular (Virchow-Robin) spaces, which may be
+      associated with impaired glymphatic drainage post-TBI.
+    core_fields:
+      presence: true
+    supplementary_fields:
+      location: [basal_ganglia, centrum_semiovale, midbrain, other]
+      severity: [mild, moderate, severe]
+    emerging_fields:
+      quantitative_count: null
+      association_with_tapvi: [co_occurring, independent]
+    related_cdes: [brain_atrophy, tapvi]
+
+# =============================================================================
+# SUMMARY CLASSIFICATION SCORES
+# These are derived from the underlying CDEs above, not standalone findings.
+# =============================================================================
+classification_scores:
+  marshall_ct:
+    id: marshall_ct_classification
+    full_name: "Marshall CT Classification"
+    note: >
+      Summary score derived from: basal cistern status, midline shift,
+      lesion volume, and surgical evacuation status. Must be computed
+      from the component CDEs above.
+    grades:
+      I:
+        label: "Diffuse Injury I"
+        definition: "No visible intracranial pathology on CT"
+        component_criteria:
+          cisterns: normal
+          midline_shift_mm: 0
+          high_density_lesion_gt25cc: false
+      II:
+        label: "Diffuse Injury II"
+        definition: "Cisterns present, midline shift 0-5mm, no high/mixed density lesion >25cc"
+        component_criteria:
+          cisterns: normal
+          midline_shift_mm: [0, 5]
+          high_density_lesion_gt25cc: false
+      III:
+        label: "Diffuse Injury III (Swelling)"
+        definition: "Cisterns compressed or absent, midline shift 0-5mm, no high/mixed density lesion >25cc"
+        component_criteria:
+          cisterns: [compressed, absent]
+          midline_shift_mm: [0, 5]
+          high_density_lesion_gt25cc: false
+      IV:
+        label: "Diffuse Injury IV (Shift)"
+        definition: "Midline shift >5mm, no high/mixed density lesion >25cc"
+        component_criteria:
+          midline_shift_mm: ">5"
+          high_density_lesion_gt25cc: false
+      V:
+        label: "Evacuated Mass Lesion"
+        definition: "Any lesion surgically evacuated"
+        component_criteria:
+          surgical_evacuation: true
+      VI:
+        label: "Non-Evacuated Mass Lesion"
+        definition: "High or mixed density lesion >25cc, not surgically evacuated"
+        component_criteria:
+          high_density_lesion_gt25cc: true
+          surgical_evacuation: false
+
+  rotterdam_ct:
+    id: rotterdam_ct_score
+    full_name: "Rotterdam CT Score"
+    note: "Sum of component scores + 1. Range 1-6."
+    components:
+      basal_cisterns: {normal: 0, compressed: 1, absent: 2}
+      midline_shift: {"0-5mm": 0, ">5mm": 1}
+      epidural_hematoma: {present: 0, absent: 1}
+      ivh_or_tsah: {absent: 0, present: 1}
+
+# =============================================================================
+# PROGNOSTIC FEATURE CLUSTERS (WG2 / TRACK-TBI / CENTER-TBI Evidence)
+# =============================================================================
+prognostic_feature_clusters:
+  mild_tbi_incomplete_recovery:
+    gcs_range: [13, 15]
+    label: "Associated with incomplete recovery in GCS 13-15"
+    co_occurring_findings:
+      - contusion
+      - subdural_hematoma
+      - traumatic_subarachnoid_hemorrhage
+    evidence: "TRACK-TBI/CENTER-TBI"
+
+  mild_tbi_severe_impairment:
+    gcs_range: [13, 15]
+    label: "Associated with more severe impairment in GCS 13-15"
+    co_occurring_findings:
+      - intraventricular_hemorrhage
+      - tapvi
+    evidence: "TRACK-TBI/CENTER-TBI"
+
+  mild_tbi_edh:
+    gcs_range: [12, 15]
+    label: "Associated with incomplete recovery in GCS 12-15"
+    findings:
+      - epidural_hematoma
+    evidence: "TRACK-TBI/CENTER-TBI"
+
+  moderate_severe_impairment:
+    gcs_range: [3, 12]
+    label: "Associated with more severe impairment in GCS 3-12"
+    co_occurring_findings:
+      - midline_shift
+      - basal_cistern_status
+    evidence: "TRACK-TBI/CENTER-TBI"
+
+# =============================================================================
+# EVIDENCEOS EXTENSIONS — NOT from WG2 source document
+# These are platform-specific additions for deployment and ML pipeline use.
+# Clearly separated from NINDS WG2 content.
+# =============================================================================
+evidenceos_extensions:
+  _namespace_note: >
+    Everything in this section is an EvidenceOS platform addition.
+    It is NOT attributed to the NINDS TBI Reclassification Working Group.
+    The WG2 document mentions LMICs (pages 3-4) and ML-based tools
+    but does not define these structured schemas.
+
+  imaging_availability_context:
+    lmic:
+      label: "Low/Middle-Income Country Context"
+      ct_availability: "limited"
+      mri_availability: "rare"
+      biomarker_role: "primary_triage_tool"
+      note: "Biomarkers become critical decision-support when imaging unavailable"
+
+    military:
+      label: "Military/Austere Environment"
+      ct_availability: "unavailable"
+      mri_availability: "unavailable"
+      biomarker_role: "sole_objective_measure"
+      note: "Point-of-care biomarkers essential for evacuation decisions"
+
+    hic:
+      label: "High-Income Country Context"
+      ct_availability: "routine"
+      mri_availability: "available"
+      biomarker_role: "complementary_to_imaging"
+
+  ml_volumetric_pipeline:
+    _note: >
+      Automated volumetric analysis outputs. These are ML pipeline
+      outputs, NOT pathoanatomic CDEs. A prior schema incorrectly expanded
+      TAPVI as "TBI AI-Powered Volumetric Imaging"; that definition is invalid.
+      In this ontology, TAPVI always means Traumatic Axonal and/or Punctate
+      Cerebrovascular Injury. The real TAPVI
+      is a pathoanatomic entity defined in CDE #10 above.
+    outputs:
+      - id: total_lesion_volume
+        unit: mL
+        label: "Total Lesion Volume"
+      - id: automated_midline_shift_mm
+        unit: mm
+        label: "Automated Midline Shift Measurement"
+      - id: ventricle_volume
+        unit: mL
+        label: "Ventricular Volume"
+      - id: edema_volume
+        unit: mL
+        label: "Perilesional Edema Volume"

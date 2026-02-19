@@ -1,0 +1,174 @@
+# Clinical Entities Ontology
+# GCS components, PTA tools, confounders, and untestable semantics
+# Aligned with NINDS TBI Reclassification 2025
+
+version: "2.0.0"
+last_updated: "2026-02-15"
+
+schema_contract:
+  mapping_fields_optional: [fhir_observation_code, omop_concept_id]
+
+gcs_components:
+  eye_opening:
+    id: gcs_eye
+    scale: [1, 4]
+    values:
+      1: "No eye opening"
+      2: "Eye opening to pressure"
+      3: "Eye opening to voice"
+      4: "Spontaneous eye opening"
+    untestable_code: "NT"
+    untestable_conditions: ["periorbital_swelling", "facial_trauma"]
+
+  verbal_response:
+    id: gcs_verbal
+    scale: [1, 5]
+    values:
+      1: "No verbal response"
+      2: "Incomprehensible sounds"
+      3: "Inappropriate words"
+      4: "Confused"
+      5: "Oriented"
+    untestable_code: "NT"
+    untestable_conditions: ["intubation", "tracheostomy", "facial_trauma"]
+
+  motor_response:
+    id: gcs_motor
+    scale: [1, 6]
+    values:
+      1: "No motor response"
+      2: "Extension to pain"
+      3: "Abnormal flexion"
+      4: "Withdrawal from pain"
+      5: "Localizing pain"
+      6: "Obeys commands"
+    untestable_code: "NT"
+    untestable_conditions: ["paralysis", "spinal_cord_injury", "chemical_paralysis"]
+
+pediatric_gcs:
+  _note: "Use pediatric adaptations when developmental stage limits standard adult verbal/motor assessment"
+  age_lt_2_years:
+    eye_opening:
+      scale: [1, 4]
+      values:
+        1: "No eye opening"
+        2: "Eye opening to pain"
+        3: "Eye opening to voice"
+        4: "Spontaneous"
+    verbal_response:
+      scale: [1, 5]
+      values:
+        1: "No vocalization"
+        2: "Inconsolable, agitated"
+        3: "Persistently irritable/crying"
+        4: "Cries but consolable"
+        5: "Coos/babbles appropriately"
+    motor_response:
+      scale: [1, 6]
+      values:
+        1: "No movement"
+        2: "Extension to pain"
+        3: "Abnormal flexion to pain"
+        4: "Withdraws to pain"
+        5: "Localizes pain"
+        6: "Spontaneous purposeful movement"
+
+  age_2_to_5_years:
+    verbal_response:
+      scale: [1, 5]
+      values:
+        1: "No verbal response"
+        2: "Incomprehensible sounds"
+        3: "Inappropriate words"
+        4: "Confused speech"
+        5: "Age-appropriate words/sentences"
+    motor_response:
+      scale: [1, 6]
+      values:
+        1: "No movement"
+        2: "Extension to pain"
+        3: "Abnormal flexion"
+        4: "Withdrawal to pain"
+        5: "Localizes pain"
+        6: "Obeys commands"
+
+pupil_assessment:
+  reactivity:
+    id: pupil_reactivity
+    values:
+      both_reactive: "Both pupils reactive"
+      one_unreactive: "One pupil unreactive (anisocoria)"
+      both_unreactive: "Both pupils unreactive (bilateral fixed)"
+    clinical_significance:
+      both_unreactive: "Critical — indicates brainstem compromise or herniation"
+      one_unreactive: "Concerning — may indicate uncal herniation"
+
+pta_tools:
+  goat:
+    id: "GOAT"
+    full_name: "Galveston Orientation and Amnesia Test"
+    score_range: [0, 100]
+    normal_threshold: 75
+    domains: ["orientation", "memory"]
+    administration:
+      target_population: "adult"
+      repeat_interval_hours: 24
+      pta_resolution_rule: "Two consecutive scores >= 75"
+      assessor: "trained clinician"
+    scoring_notes:
+      orientation_subdomains: [person, place, time]
+      memory_subdomains: [anterograde, retrograde]
+
+  westmead:
+    id: "WPTAS"
+    full_name: "Westmead Post-Traumatic Amnesia Scale"
+    score_range: [0, 12]
+    normal_threshold: 12
+    domains: ["orientation", "memory", "recognition"]
+    administration:
+      target_population: "adult_and_adolescent"
+      repeat_interval_hours: 24
+      pta_resolution_rule: "Three consecutive scores = 12"
+      assessor: "trained clinician"
+    scoring_notes:
+      maximum_score_definition: "12 indicates no PTA"
+
+  o_log:
+    id: "O-LOG"
+    full_name: "Orientation Log"
+    score_range: [0, 30]
+    normal_threshold: 25
+    domains: ["orientation"]
+    administration:
+      target_population: "adult"
+      repeat_interval_hours: 24
+      pta_resolution_rule: "Local protocol; commonly >= 25 on repeat testing"
+      assessor: "trained clinician"
+    scoring_notes:
+      interpretation: "Higher is better; use serial trend for recovery trajectory"
+
+confounders:
+  - id: intoxication
+    label: "Alcohol/Drug Intoxication"
+    affects: ["gcs_verbal", "gcs_motor", "pupil_reactivity"]
+    clinical_note: "May falsely lower GCS; serial reassessment required"
+
+  - id: sedation
+    label: "Pharmacological Sedation"
+    affects: ["gcs_eye", "gcs_verbal", "gcs_motor"]
+    clinical_note: "GCS unreliable under sedation; document pre-sedation GCS"
+
+  - id: intubation
+    label: "Endotracheal Intubation"
+    affects: ["gcs_verbal"]
+    clinical_note: "Verbal component untestable; report as GCS-M (motor only)"
+
+  - id: chemical_paralysis
+    label: "Neuromuscular Blockade"
+    affects: ["gcs_motor"]
+    clinical_note: "Motor component untestable; document timing of paralytic"
+
+  - id: hypothermia
+    label: "Therapeutic Hypothermia"
+    affects: ["gcs_total", "pupil_reactivity"]
+    clinical_note: "May suppress neurological responses"

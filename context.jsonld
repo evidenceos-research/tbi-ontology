@@ -1,0 +1,43 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "eos": "https://evidenceos.org/ontology/",
+    "schema": "https://schema.org/",
+    "fhir": "http://hl7.org/fhir/",
+    "omop": "http://athena.ohdsi.org/concept/",
+    "radlex": "http://radlex.org/RID/",
+    "dicom": "http://dicom.nema.org/resources/ontology/DCM/",
+    "loinc": "http://loinc.org/rdf/",
+    "who": "https://id.who.int/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+
+    "cbimFramework": "eos:cbim_framework",
+    "clinicalEntities": "eos:clinical_entities",
+    "imagingCDEs": "eos:imaging_cdes",
+    "temporalPhases": "eos:temporal_phases",
+    "provenance": "eos:provenance",
+    "implementationScience": "eos:implementation_science",
+
+    "gfap_pg_ml": {
+      "@id": "eos:gfap_pg_ml",
+      "@type": "xsd:float"
+    },
+    "uchl1_pg_ml": {
+      "@id": "eos:uchl1_pg_ml",
+      "@type": "xsd:float"
+    },
+    "gcs_total": {
+      "@id": "eos:gcs_total",
+      "@type": "xsd:integer"
+    },
+    "tapvi": "eos:tapvi",
+
+    "fhir_observation_code": "fhir:Observation.code",
+    "fhir_location_code": "fhir:Location.type",
+    "omop_concept_id": "schema:identifier",
+    "radlex_id": "schema:identifier",
+    "dicom_sr_code": "dicom:CodeValue",
+    "loinc_code": "loinc:code",
+    "who_service_delivery_code": "who:service"
+  }
+}

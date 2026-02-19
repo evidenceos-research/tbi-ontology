@@ -1,0 +1,874 @@
+# =============================================================================
+# METHODOLOGY EXTRACTION ONTOLOGY
+# Systematic extraction schema for NINDS TBI Reclassification citation analysis
+# =============================================================================
+#
+# PURPOSE: Defines the structured extraction schema for systematically capturing
+# methodology details (preprocessing, modeling, validation, datasets) from every
+# study cited across the 6 NINDS TBI Reclassification Working Group publications.
+#
+# PUBLICATION TARGET: "Methodological Heterogeneity in TBI Outcome Prediction:
+#   A Systematic Extraction of Preprocessing, Modeling, and Validation Approaches
+#   Across the NINDS Reclassification Evidence Base"
+#
+# INTEGRATION:
+#   - Feeds into: tbi-knowledge-graph (as MethodologyNode entities)
+#   - Sources from: evidence-acquisition module (OpenAlex/PubMed clients)
+#   - Cross-references: temporal_phases.yaml, imaging_cdes.yaml, provenance.yaml
+#   - Populates: EVIDENCE_REGISTRY.md methodology columns
+
+version: "1.0.0"
+last_updated: "2026-02-15"
+schema_authority: "EvidenceOS Research"
+
+# =============================================================================
+# SECTION 1: SOURCE PUBLICATIONS — THE 6+2 NINDS CORPUS
+# =============================================================================
+#
+# 6 Working Group papers + 2 Steering Committee papers = 8 source documents
+# Each source's reference list is the starting corpus for extraction.
+# Only WG2 has a confirmed DOI; others use projected DOI format.
+
+ninds_source_publications:
+  steering_committee_lancet:
+    id: "SC-Lancet"
+    title: "A new characterisation of acute traumatic brain injury"
+    authors: "Manley GT et al."
+    journal: "Lancet Neurology"
+    year: 2025
+    volume: "24(6)"
+    pages: "P512-523"
+    doi_confirmed: false
+    doi_projected: null
+    publication_date: "2025-05"
+    role: "Overarching framework paper — CBI-M model definition"
+
+  steering_committee_jnt:
+    id: "SC-JNT"
+    title: "Marking a New Age in Characterization of Acute Traumatic Brain Injury"
+    authors: "Manley GT et al."
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-05-20"
+    doi_confirmed: false
+    role: "JNT companion to Lancet overview"
+
+  wg1_clinical:
+    id: "WG1"
+    title: "Clinical Assessment on Days 1-14 for the Characterization of Traumatic Brain Injury"
+    lead_author: "Menon DK"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-05-20"
+    doi_projected: "10.1089/neu.2025.wg1"
+    doi_confirmed: false
+    focus: "GCS evolution, Days 1-14 assessment, recovery trajectory phenotyping"
+    expected_citation_count: "60-120"
+
+  wg2_imaging:
+    id: "WG2"
+    title: "Neuroimaging Characterization of Acute Traumatic Brain Injury with Focus on Frontline Clinicians"
+    lead_author: "Mac Donald CL, Yuh EL"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    volume: "42(13-14)"
+    pages: "1056-1064"
+    doi: "10.1089/neu.2025.0079"
+    doi_confirmed: true
+    pmid: "40393517"
+    publication_date: "2025-05-20"
+    focus: "CT/MRI standardization, TAPVI terminology, 27 imaging CDEs"
+    expected_citation_count: "80-150"
+
+  wg3_biomarkers:
+    id: "WG3"
+    title: "Blood-Based Biomarkers for Improved Characterization of Traumatic Brain Injury"
+    lead_author: "Bazarian JJ"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-05-20"
+    doi_projected: "10.1089/neu.2025.wg3"
+    doi_confirmed: false
+    focus: "GFAP/UCH-L1 panel, temporal dynamics, multi-marker strategy"
+    expected_citation_count: "100-200"
+
+  wg4_psychosocial:
+    id: "WG4"
+    title: "Toward More Holistic Early Traumatic Brain Injury Evaluation and Care"
+    lead_author: "Nelson LD"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-06-04"
+    doi_projected: "10.1089/neu.2025.wg4"
+    doi_confirmed: false
+    focus: "Social determinants, environmental modifiers, cultural context"
+    expected_citation_count: "40-80"
+
+  wg5_implementation:
+    id: "WG5"
+    title: "Starting with the End in Mind: Recommendations to Optimize Implementation"
+    lead_author: "Bragge P"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-05-20"
+    doi_projected: "10.1089/neu.2025.wg5"
+    doi_confirmed: false
+    focus: "Implementation science, training, clinical workflow integration"
+    expected_citation_count: "30-60"
+
+  wg6_retrospective:
+    id: "WG6"
+    title: "Retrospective Identification and Characterization of Traumatic Brain Injury"
+    lead_author: "Corrigan JD"
+    journal: "Journal of Neurotrauma"
+    year: 2025
+    publication_date: "2025-05-20"
+    doi_projected: "10.1089/neu.2025.wg6"
+    doi_confirmed: false
+    focus: "Legacy dataset reclassification, data harmonization"
+    expected_citation_count: "40-80"
+
+# =============================================================================
+# SECTION 2: STUDY-LEVEL EXTRACTION SCHEMA
+# =============================================================================
+#
+# Every cited study gets one record with the following fields.
+# Fields marked required: true MUST be populated; others are best-effort.
+# Enum values define controlled vocabularies for grouping/comparison.
+
+study_extraction_schema:
+  # ── Bibliographic Identity ──
+  bibliographic:
+    doi:
+      type: string
+      required: true
+      description: "Digital Object Identifier (primary dedup key)"
+    pmid:
+      type: string
+      required: false
+      description: "PubMed ID"
+    openalex_id:
+      type: string
+      required: false
+      description: "OpenAlex Work ID (W-prefixed)"
+    title:
+      type: string
+      required: true
+    authors:
+      type: list[string]
+      required: true
+      description: "First author + last author minimum; full list preferred"
+    journal:
+      type: string
+      required: true
+    year:
+      type: integer
+      required: true
+    citation_count:
+      type: integer
+      required: false
+      description: "At time of extraction (OpenAlex cited_by_count)"
+    citing_wgs:
+      type: list[enum]
+      required: true
+      enum: [SC-Lancet, SC-JNT, WG1, WG2, WG3, WG4, WG5, WG6]
+      description: "Which NINDS WG papers cite this study"
+
+  # ── Research Group & Consortium ──
+  provenance:
+    research_group:
+      type: string
+      required: true
+      description: "Primary research group/lab (e.g., 'TRACK-TBI Investigators', 'CENTER-TBI', 'Turku TBI Lab')"
+      examples:
+        - "TRACK-TBI Investigators"
+        - "CENTER-TBI Collaboration"
+        - "Turku University Hospital TBI Research Group"
+        - "Cambridge Neurosciences"
+        - "University of Rochester Emergency Medicine"
+    consortium:
+      type: enum
+      required: false
+      enum: [TRACK-TBI, CENTER-TBI, ADAPT, COBRIT, ProTECT, BOOST, INTBIR, ENIGMA, TBIcare, IMPACT, CRASH, OTHER, NONE]
+      description: "Major consortium affiliation if applicable"
+    country:
+      type: list[string]
+      required: false
+      description: "Country/countries of data collection"
+    funding:
+      type: list[string]
+      required: false
+      description: "Primary funding sources (e.g., NINDS, DoD, EU Horizon)"
+
+  # ── Dataset Characteristics ──
+  dataset:
+    name:
+      type: string
+      required: true
+      description: "Dataset name or cohort identifier"
+      examples: ["TRACK-TBI Pilot", "CENTER-TBI Core", "ALERT-TBI", "ADAPT", "Turku TBI 2010-2015"]
+    sample_size:
+      type: integer
+      required: true
+      description: "Total n in analysis"
+    tbi_severity_mix:
+      type: list[enum]
+      required: true
+      enum: [mild, moderate, severe, all_severity, pediatric_mild, pediatric_moderate_severe, sport_concussion]
+      description: "TBI severity categories included"
+    enrollment_criteria:
+      type: string
+      required: false
+      description: "Key inclusion/exclusion criteria summary"
+    age_range:
+      type: string
+      required: false
+      description: "Age range of cohort (e.g., '18-80', 'pediatric <18', 'all ages')"
+    data_collection_period:
+      type: string
+      required: false
+      description: "Calendar years of enrollment"
+    multicenter:
+      type: boolean
+      required: true
+    center_count:
+      type: integer
+      required: false
+    data_availability:
+      type: enum
+      required: false
+      enum: [public_open, public_controlled, federated, private, unavailable]
+      description: "Data access model"
+    data_repository:
+      type: string
+      required: false
+      description: "Where data is hosted (e.g., FITBIR, PhysioNet, institutional)"
+
+  # ── Input Variables ──
+  input_variables:
+    clinical_variables:
+      type: list[string]
+      required: false
+      description: "Clinical input features used"
+      common_values: ["GCS_total", "GCS_motor", "pupil_reactivity", "age", "sex", "injury_mechanism", "PTA_duration", "LOC_duration", "comorbidities"]
+    biomarker_variables:
+      type: list[string]
+      required: false
+      description: "Blood biomarker inputs"
+      common_values: ["GFAP", "UCH-L1", "S100B", "NfL", "NSE", "total_tau", "p-tau-217"]
+    imaging_variables:
+      type: list[string]
+      required: false
+      description: "Imaging features/CDEs used"
+      common_values: ["Marshall_CT", "Rotterdam_CT", "Helsinki_CT", "SWI_microbleed_count", "DTI_FA", "DTI_MD", "lesion_volume", "midline_shift"]
+    time_variables:
+      type: list[string]
+      required: false
+      description: "Temporal/time-series variables"
+    psychosocial_variables:
+      type: list[string]
+      required: false
+      description: "Psychosocial/environmental modifiers used"
+    total_feature_count:
+      type: integer
+      required: false
+
+  # ── Biomarker Assay / Platform Provenance ──
+  biomarker_assay:
+    platform_type:
+      type: enum
+      required: false
+      enum: [point_of_care, central_lab, research_use_only, not_reported]
+      description: "Assay deployment context used by the study"
+    platform_id:
+      type: string
+      required: false
+      description: "Platform identifier aligned to provenance.yaml (e.g., abbott_i_stat_tbi_plasma)"
+    cutpoint_derivation:
+      type: enum
+      required: false
+      enum: [study_derived, externally_validated, regulatory_cleared, borrowed_from_literature, not_applicable]
+      description: "How biomarker cutpoint/threshold was sourced"
+    interpretation_mode:
+      type: enum
+      required: false
+      enum: [categorical_threshold, continuous_score, multi_threshold, not_specified]
+    preanalytical_reported:
+      type: boolean
+      required: false
+      description: "Whether sample handling/pre-analytical conditions were documented"
+
+  # ── Imaging CDE Operationalization ──
+  imaging_operationalization:
+    modalities_used:
+      type: list[enum]
+      required: false
+      enum: [ct_noncontrast, ct_angiography, mri_t1, mri_t2, mri_flair, mri_dwi, mri_swi, dti, perfusion_ct, perfusion_mri, not_reported]
+      description: "Modalities explicitly operationalized in the study"
+    quantification_method:
+      type: enum
+      required: false
+      enum: [classification_system_only, manual_rating, semi_automated, fully_automated, not_reported]
+    cde_tier:
+      type: enum
+      required: false
+      enum: [core, supplementary, emerging, non_standardized, not_reported]
+      description: "Approximate CDE tier used relative to imaging_cdes.yaml"
+
+  # ── Outcome Definition ──
+  outcome:
+    primary_outcome:
+      type: string
+      required: true
+      description: "Primary outcome variable"
+      examples: ["GOSE at 6 months", "CT positivity", "Mortality at discharge", "GOSE at 12 months", "Functional independence at 6 months"]
+    outcome_type:
+      type: enum
+      required: true
+      enum: [binary, ordinal, continuous, time_to_event, multiclass, trajectory]
+    decision_target:
+      type: enum
+      required: true
+      enum: [ct_rule_out, neurosurgery_escalation, icu_admission, discharge_pathway, rehab_referral, tbi_confirmation, prognostic_counseling, clinical_trial_stratification, monitoring_escalation, not_applicable]
+      description: "Clinical decision this outcome/model is intended to inform"
+    actionability_horizon:
+      type: enum
+      required: false
+      enum: [immediate_ed, early_inpatient_d1_14, subacute_1_30d, chronic_gt30d, not_specified]
+      description: "Decision timeline for intended use"
+    resource_context_assumed:
+      type: enum
+      required: false
+      enum: [hic_academic, hic_community, lmic_urban, lmic_rural, military_austere, not_specified]
+      description: "Clinical resource context implicitly or explicitly assumed"
+    outcome_timepoint:
+      type: string
+      required: false
+      description: "Assessment timepoint (e.g., '6 months', 'discharge', '12 months')"
+    outcome_binarization:
+      type: string
+      required: false
+      description: "If ordinal was binarized, the threshold (e.g., 'GOSE <=4 vs >=5')"
+    secondary_outcomes:
+      type: list[string]
+      required: false
+
+  # ── Preprocessing Pipeline ──
+  preprocessing:
+    missing_data_handling:
+      type: enum
+      required: true
+      enum:
+        - complete_case_analysis
+        - single_mean_imputation
+        - single_median_imputation
+        - single_mode_imputation
+        - knn_imputation
+        - mice_bayesian_ridge
+        - mice_random_forest
+        - mice_pmm
+        - miceforest
+        - expectation_maximization
+        - last_observation_carried_forward
+        - multiple_imputation_rubin
+        - hot_deck
+        - indicator_method
+        - model_native_handling  # XGBoost/LightGBM native
+        - not_reported
+        - not_applicable
+      description: "Primary missing data strategy"
+    missingness_rate_reported:
+      type: boolean
+      required: true
+      description: "Did the study report per-variable or overall missingness rates?"
+    missingness_mechanism_discussed:
+      type: enum
+      required: false
+      enum: [MCAR, MAR, MNAR, not_discussed]
+    imputation_pooling:
+      type: enum
+      required: false
+      enum: [rubins_rules, median_imputed_set, single_best_imputation, not_applicable]
+
+    normalization:
+      type: enum
+      required: true
+      enum:
+        - z_score_standardization
+        - min_max_scaling
+        - robust_scaling
+        - log_transformation
+        - box_cox
+        - yeo_johnson
+        - rank_inverse_normal
+        - none_reported
+        - not_applicable
+      description: "Feature normalization/scaling approach"
+
+    feature_selection:
+      type: enum
+      required: false
+      enum:
+        - lasso_l1
+        - elastic_net
+        - recursive_feature_elimination
+        - boruta
+        - mutual_information
+        - univariate_filter
+        - expert_clinical_selection
+        - pca_reduction
+        - autoencoder_reduction
+        - none_all_features
+        - not_reported
+      description: "Feature selection or dimensionality reduction method"
+
+    outlier_handling:
+      type: enum
+      required: false
+      enum: [winsorization, iqr_clipping, z_score_removal, isolation_forest, none_reported, not_applicable]
+
+    class_imbalance_handling:
+      type: enum
+      required: false
+      enum:
+        - smote
+        - adasyn
+        - random_oversampling
+        - random_undersampling
+        - class_weights
+        - focal_loss
+        - none_reported
+        - not_applicable
+
+    temporal_anchor:
+      type: enum
+      required: false
+      enum: [injury_time_zero, ed_arrival, first_imaging, hospital_admission, procedure_time, not_specified]
+      description: "Primary anchor used to align time-varying data"
+
+  # ── Temporal Design ──
+  temporal_design:
+    sampling_windows:
+      type: list[enum]
+      required: false
+      enum: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+      description: "Temporal windows used for features/labeling"
+    serial_sampling_design:
+      type: enum
+      required: false
+      enum: [single_timepoint, repeated_measures_fixed, repeated_measures_variable, continuous_monitoring, not_applicable]
+      description: "Design of repeated temporal measurements"
+    missing_timepoint_handling:
+      type: enum
+      required: false
+      enum: [excluded, last_observation_carried_forward, interpolated, model_native, not_reported, not_applicable]
+      description: "How missing timepoints were handled in longitudinal data"
+
+  # ── Confounder Handling ──
+  confounders:
+    confounders_measured:
+      type: list[enum]
+      required: false
+      enum: [intoxication, sedation_intubation, polytrauma, extracranial_injury, neurodegeneration_comorbidity, prior_tbi, age_effects, anticoagulation, psychiatric_comorbidity, none_reported]
+      description: "Key confounders explicitly measured in study design/analysis"
+    confounder_mitigation:
+      type: enum
+      required: false
+      enum: [statistical_adjustment, stratification, restriction, sensitivity_analysis, matched_design, none_reported]
+      description: "How confounders were handled analytically"
+
+  # ── Modeling Approach ──
+  modeling:
+    model_family:
+      type: enum
+      required: true
+      enum:
+        - logistic_regression
+        - cox_regression
+        - ordinal_regression
+        - linear_regression
+        - decision_tree
+        - random_forest
+        - gradient_boosting  # XGBoost, LightGBM, CatBoost
+        - svm
+        - neural_network_mlp
+        - neural_network_cnn
+        - neural_network_rnn_lstm
+        - neural_network_transformer
+        - neural_ode
+        - bayesian_model
+        - ensemble_stacking
+        - ensemble_voting
+        - automl
+        - deep_survival_model
+        - graph_neural_network
+        - foundation_model_finetuned
+        - descriptive_statistical  # No predictive model
+        - meta_analysis
+        - systematic_review_only
+        - qualitative_only
+    model_specific:
+      type: string
+      required: false
+      description: "Specific model name/variant (e.g., 'XGBoost v1.7', 'ResNet-50', 'BERT-base')"
+    hyperparameter_tuning:
+      type: enum
+      required: false
+      enum: [grid_search, random_search, bayesian_optimization, manual, not_reported, not_applicable]
+    interpretability_method:
+      type: enum
+      required: false
+      enum: [shap, lime, feature_importance_mdi, permutation_importance, attention_weights, grad_cam, none_reported, not_applicable]
+    calibration_method:
+      type: enum
+      required: false
+      enum: [platt_scaling, isotonic_regression, temperature_scaling, none_reported, not_applicable]
+
+  # ── Validation Strategy ──
+  validation:
+    internal_validation:
+      type: enum
+      required: true
+      enum:
+        - train_test_split
+        - k_fold_cv
+        - stratified_k_fold
+        - leave_one_out
+        - leave_one_center_out
+        - nested_cv
+        - bootstrap
+        - temporal_split
+        - apparent_validation_only  # No holdout — resubstitution
+        - none_reported
+    k_folds:
+      type: integer
+      required: false
+      description: "Number of folds if CV used"
+    external_validation:
+      type: boolean
+      required: true
+      description: "Was external validation performed on independent cohort?"
+    external_dataset:
+      type: string
+      required: false
+      description: "Name of external validation dataset"
+    temporal_validation:
+      type: boolean
+      required: false
+      description: "Was temporal (train-before-test) validation performed?"
+    geographic_validation:
+      type: boolean
+      required: false
+      description: "Was geographic/multi-site validation performed?"
+    validation_geography:
+      type: list[string]
+      required: false
+      description: "Countries/regions represented in validation"
+    care_setting:
+      type: enum
+      required: false
+      enum: [level_1_trauma, level_2_trauma, community_hospital, district_hospital, primary_care, military_field, mixed, not_specified]
+      description: "Primary care delivery context where validation occurred"
+    subgroup_performance_reported:
+      type: list[enum]
+      required: false
+      enum: [pediatric, geriatric, female, race_ethnicity, severity_subgroup, none]
+      description: "Subgroups with separately reported performance"
+
+  # ── Performance Metrics ──
+  performance:
+    discrimination_metrics:
+      type: list[enum]
+      required: false
+      enum: [auroc, auprc, sensitivity, specificity, ppv, npv, f1, mcc, balanced_accuracy, accuracy]
+    calibration_metrics:
+      type: list[enum]
+      required: false
+      enum: [hosmer_lemeshow, calibration_slope, calibration_intercept, brier_score, ece]
+    clinical_utility_metrics:
+      type: list[enum]
+      required: false
+      enum: [nri, idi, decision_curve_analysis, net_benefit]
+    fairness_metrics:
+      type: list[enum]
+      required: false
+      enum: [equalized_odds, demographic_parity, calibration_across_groups, none_reported]
+    primary_result:
+      type: string
+      required: false
+      description: "Primary headline result (e.g., 'AUROC 0.87 [0.83-0.91]')"
+
+  # ── Reporting Quality ──
+  reporting:
+    follows_tripod:
+      type: boolean
+      required: false
+      description: "Does the study follow TRIPOD reporting guidelines?"
+    follows_probast:
+      type: boolean
+      required: false
+      description: "Was risk of bias assessed using PROBAST?"
+    code_available:
+      type: boolean
+      required: false
+    data_shared:
+      type: boolean
+      required: false
+    sample_size_justification:
+      type: boolean
+      required: false
+      description: "Was sample size adequacy discussed/justified?"
+
+  # ── Implementation Readiness (implementation-focused studies) ──
+  implementation:
+    implementation_readiness_notes:
+      type: string
+      required: false
+      description: "Implementation-focused notes (workflow impact, training burden, integration constraints)"
+
+  # ── Retrospective Ascertainment Validity (retrospective studies only) ──
+  retrospective_ascertainment:
+    method:
+      type: enum
+      required: false
+      enum: [self_report, proxy_report, medical_records, icd_algorithm, clinical_interview, multi_modal, not_specified]
+      description: "How prior TBI exposure was ascertained"
+    instrument:
+      type: string
+      required: false
+      description: "Named instrument if used (e.g., OSU-TBI-ID, BISQ, BTACT)"
+    recall_interval:
+      type: string
+      required: false
+      description: "Recall period used for retrospective ascertainment"
+
+  # ── Cross-References ──
+  cross_references:
+    ontology_files_referenced:
+      type: list[string]
+      required: false
+      description: "Which EvidenceOS ontology files reference this study"
+      examples: ["temporal_phases.yaml", "imaging_cdes.yaml", "provenance.yaml"]
+    evidence_registry_id:
+      type: integer
+      required: false
+      description: "Study number in EVIDENCE_REGISTRY.md (1-33)"
+    planned_publication:
+      type: list[string]
+      required: false
+      description: "Which planned EvidenceOS publications use this study"
+
+# =============================================================================
+# SECTION 3: GROUPING DIMENSIONS
+# =============================================================================
+#
+# Defines the axes along which extracted studies can be grouped for
+# systematic comparison ("apples to apples").
+
+grouping_dimensions:
+  by_dataset:
+    description: "Group studies sharing the same underlying dataset"
+    key_field: "dataset.name"
+    expected_clusters:
+      - name: "TRACK-TBI studies"
+        consortium: TRACK-TBI
+        note: "Largest US prospective TBI cohort; many modeling papers"
+      - name: "CENTER-TBI studies"
+        consortium: CENTER-TBI
+        note: "Largest European TBI cohort; multi-center, multi-modal"
+      - name: "ADAPT studies"
+        consortium: ADAPT
+        note: "Pediatric TBI; NIH-funded"
+      - name: "Single-center retrospective"
+        note: "Largest category by count but smallest by individual n"
+
+  by_research_group:
+    description: "Group studies by research group/lab for methodology consistency analysis"
+    key_field: "provenance.research_group"
+    analysis: "Identify whether groups consistently use the same preprocessing/modeling pipeline"
+
+  by_outcome_definition:
+    description: "Group studies using the same outcome variable"
+    key_field: "outcome.primary_outcome"
+    expected_clusters:
+      - "GOSE 6-month binary (<=4 vs >=5)"
+      - "GOSE 6-month ordinal"
+      - "CT positivity (any intracranial finding)"
+      - "Mortality at discharge / 14 days"
+      - "Favorable outcome (GOSE >=5) at 12 months"
+
+  by_model_family:
+    description: "Group studies by modeling approach"
+    key_field: "modeling.model_family"
+    analysis: "Compare performance across families controlling for dataset"
+
+  by_imputation_strategy:
+    description: "Group studies by missing data handling"
+    key_field: "preprocessing.missing_data_handling"
+    analysis: "Quantify how imputation choice affects reported performance"
+
+  by_validation_strategy:
+    description: "Group by validation rigor"
+    key_field: "validation.internal_validation"
+    analysis: "Compare apparent vs CV vs external validation performance drops"
+
+  by_tbi_severity:
+    description: "Group by TBI severity mix"
+    key_field: "dataset.tbi_severity_mix"
+    analysis: "Separate mild-only from moderate-severe from mixed-severity studies"
+
+  by_wg_citation:
+    description: "Group by which NINDS WG cites the study"
+    key_field: "bibliographic.citing_wgs"
+    analysis: "Cross-WG citation overlap; identify bridge studies cited by 3+ WGs"
+
+# =============================================================================
+# SECTION 4: AUTOMATED EXTRACTION PIPELINE SPEC
+# =============================================================================
+#
+# Defines how the extraction process maps onto existing evidence-acquisition
+# module components.
+
+extraction_pipeline:
+  phase_1_citation_graph:
+    description: "Extract all referenced_works from each NINDS WG publication via OpenAlex"
+    tool: "evidence-acquisition/sources/clients.py::OpenAlexClient"
+    method: |
+      For each source publication:
+        1. Resolve DOI → OpenAlex Work ID
+        2. GET /works/{id}?select=referenced_works
+        3. For each referenced_work: GET /works/{ref_id}?select=title,doi,authorships,publication_year,cited_by_count,primary_location,abstract_inverted_index,referenced_works
+        4. Deduplicate by DOI across all 8 source publications
+        5. Tag each study with citing_wgs list
+    output: "List[EvidenceRecord] with citing_wgs metadata"
+    estimated_api_calls: "8 source lookups + ~600-1000 reference lookups"
+
+  phase_2_metadata_enrichment:
+    description: "Enrich with PubMed MeSH, full abstract, and cross-source dedup"
+    tool: "evidence-acquisition/sources/clients.py::UnifiedEvidenceSearch"
+    method: |
+      For each unique DOI from Phase 1:
+        1. PubMed fetch by DOI → MeSH terms, structured abstract
+        2. Semantic Scholar fetch → citation context, fields of study
+        3. Merge into enriched EvidenceRecord
+    output: "Enriched EvidenceRecord with MeSH and citation context"
+
+  phase_3_methodology_extraction:
+    description: "LLM-assisted structured extraction of methodology fields"
+    strategy: "Two-pass extraction with human verification"
+    pass_1_automated:
+      tool: "Claude API (claude-sonnet-4-5-20250929)"
+      prompt_template: |
+        Given the following research paper abstract and metadata, extract the
+        methodology details into the structured schema below. If a field cannot
+        be determined from the abstract alone, mark it as "not_determinable_from_abstract".
+
+        Paper: {title} ({year})
+        Authors: {authors}
+        Abstract: {abstract}
+        MeSH Terms: {mesh_terms}
+
+        Extract:
+        - dataset.name
+        - dataset.sample_size
+        - dataset.tbi_severity_mix
+        - preprocessing.missing_data_handling
+        - preprocessing.normalization
+        - modeling.model_family
+        - modeling.model_specific
+        - outcome.primary_outcome
+        - outcome.outcome_type
+        - validation.internal_validation
+        - validation.external_validation
+        - performance.primary_result
+      confidence_threshold: 0.8
+      fallback: "Flag for full-text review in Phase 3b"
+
+    pass_2_full_text:
+      description: "For studies where abstract-only extraction has low confidence"
+      method: |
+        1. Retrieve full text via Unpaywall/OpenAlex open_access.oa_url
+        2. Chunk via evidence-acquisition/chunking/chunker.py
+        3. Extract methodology fields from Methods section chunks
+        4. Merge with abstract-level extraction, preferring full-text
+      estimated_full_text_needed: "~30-40% of corpus (where methods not in abstract)"
+
+  phase_4_validation_and_output:
+    description: "Human expert validation of extracted records"
+    method: |
+      1. Generate extraction confidence scores per field
+      2. Flag low-confidence extractions for expert review
+      3. Export to structured YAML (one file per study)
+      4. Populate knowledge graph MethodologyNode entities
+      5. Generate comparison tables by grouping dimension
+    outputs:
+      - "methodology_extractions/*.yaml — one per study"
+      - "methodology_comparison_tables/*.csv — grouped analyses"
+      - "knowledge_graph_import.cypher — Neo4j import script"
+      - "publication_draft_tables.md — formatted for manuscript"
+
+# =============================================================================
+# SECTION 5: PUBLICATION FRAMING
+# =============================================================================
+
+publication:
+  title: >
+    Methodological Heterogeneity in TBI Outcome Prediction: A Systematic Extraction
+    of Preprocessing, Modeling, and Validation Approaches Across the NINDS
+    Reclassification Evidence Base
+  target_journal: "Journal of Neurotrauma"
+  fallback_journals:
+    - "JAMIA"
+    - "Journal of Clinical Epidemiology"
+    - "BMC Medical Research Methodology"
+  key_analyses:
+    - name: "Imputation heterogeneity"
+      question: "What fraction of TBI prediction studies report their missing data handling strategy?"
+      hypothesis: ">50% do not report imputation method"
+    - name: "Validation inflation"
+      question: "How large is the performance gap between internal-only and externally-validated studies?"
+      hypothesis: "AUROC inflation of 0.05-0.10 in non-externally-validated studies"
+    - name: "Dataset concentration"
+      question: "What fraction of modeling studies use TRACK-TBI or CENTER-TBI data?"
+      hypothesis: ">70% of ML studies derive from 2-3 mega-cohorts"
+    - name: "Preprocessing reporting rate"
+      question: "What fraction report normalization, outlier handling, and class balance?"
+      hypothesis: "<30% report all three"
+    - name: "Model family trends"
+      question: "How has model family distribution shifted 2015-2025?"
+      hypothesis: "Gradient boosting overtook logistic regression ~2020"
+    - name: "TRIPOD compliance"
+      question: "What fraction of prediction studies follow TRIPOD guidelines?"
+      hypothesis: "<25% explicitly reference TRIPOD"
+  estimated_figure_count: 6
+  estimated_table_count: 4
+  estimated_supplementary_tables: 8-12
+
+# =============================================================================
+# SECTION 6: INTEGRATION WITH EXISTING MODULES
+# =============================================================================
+
+integration_map:
+  evidence_acquisition:
+    module: "evidenceos-research/evidence-acquisition/"
+    usage: "OpenAlexClient for citation graph extraction, PubMedClient for MeSH enrichment"
+    extension_needed: "Add get_referenced_works() method to OpenAlexClient"
+
+  ontology_bundle:
+    module: "evidenceos-research/ontology/"
+    usage: "Cross-reference extracted studies with existing ontology references"
+    new_file: "This file (methodology_extraction.yaml)"
+
+  tbi_knowledge_graph:
+    module: "evidenceos-research/tbi-knowledge-graph/"
+    usage: "Populate MethodologyNode and USES_METHOD relationship types"
+    extension_needed: "Add MethodologyNode to loader.py relationship extraction"
+
+  tabular_tbi:
+    module: "evidenceos-research/tabular-tbi/"
+    usage: "Validate our preprocessing/modeling choices against extracted corpus"
+    analysis: "Position TBI-PRISM methodology against systematic extraction findings"
+
+  evidence_registry:
+    file: "evidenceos-research/EVIDENCE_REGISTRY.md"
+    usage: "Link extracted methodology records to existing study-publication matrix"

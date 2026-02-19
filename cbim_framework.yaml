@@ -1,0 +1,244 @@
+# CBI-M Framework Ontology
+# Clinical-Biomarker-Imaging-Modifier channel definitions
+# Aligned with NINDS TBI Reclassification and BRIDGE-TBI model
+
+version: "2.0.0"
+last_updated: "2026-02-15"
+source: "MODULAR_SYSTEM_ARCHITECTURE_RESEARCH_TO_IPO_FEB_2026.md"
+
+schema_contract:
+  mapping_fields_optional: [radlex_id, dicom_sr_code, fhir_observation_code, omop_concept_id]
+  analyte_id_normalization:
+    _note: "Variable IDs include unit suffix for disambiguation. Bare canonical IDs (used in temporal_phases.yaml) map as follows:"
+    gfap: gfap_pg_ml
+    uchl1: uchl1_pg_ml
+    s100b: s100b_ug_l
+    nfl: nfl_pg_ml
+    nse: nse_ng_ml
+    total_tau: total_tau_pg_ml
+    p_tau_217: p_tau_217_pg_ml
+  assay_platform_normalization:
+    _note: "Short names in preferred_assays map to full keys in provenance.yaml"
+    abbott_i_stat: abbott_i_stat_tbi_plasma
+    biomerieux_vidas: biomerieux_vidas_tbi
+
+channels:
+  clinical:
+    id: "C"
+    label: "Clinical Channel"
+    description: "GCS components, pupil reactivity, neurological exam findings"
+    variables:
+      - id: gcs_total
+        label: "Glasgow Coma Scale Total"
+        range: [3, 15]
+        type: integer
+        required: true
+      - id: gcs_eye
+        label: "GCS Eye Opening"
+        range: [1, 4]
+        type: integer
+      - id: gcs_verbal
+        label: "GCS Verbal"
+        range: [1, 5]
+        type: integer
+      - id: gcs_motor
+        label: "GCS Motor"
+        range: [1, 6]
+        type: integer
+      - id: pupil_reactivity
+        label: "Pupil Reactivity"
+        type: categorical
+        values: ["both_reactive", "one_unreactive", "both_unreactive"]
+      - id: focal_deficit
+        label: "Focal Neurological Deficit"
+        type: boolean
+      - id: seizure
+        label: "Seizure"
+        type: boolean
+      - id: loc_duration_minutes
+        label: "Loss of Consciousness Duration"
+        unit: minutes
+        type: float
+      - id: amnesia
+        label: "Post-Traumatic Amnesia Present"
+        type: boolean
+      - id: amnesia_duration_minutes
+        label: "PTA Duration"
+        unit: minutes
+        type: float
+
+  biomarker:
+    id: "B"
+    label: "Biomarker Channel"
+    description: "Blood-based TBI biomarkers with canonical thresholds and assay context"
+    validation_rules:
+      biomarker_time_hours:
+        required: true
+        min_hours: 0.0
+        max_hours: 24.0
+        ct_decision_window_hours: 12.0
+        severity_if_outside_window: warning
+        note: "GFAP/UCH-L1 CT-triage interpretation is optimized for the first 12 hours after injury"
+    variables:
+      - id: gfap_pg_ml
+        label: "GFAP"
+        unit: "pg/mL"
+        type: float
+        ct_threshold: 30.0
+        analyte_status: clinical_use
+        preferred_assays: [abbott_i_stat, biomerieux_vidas]
+        threshold_source: "Abbott i-STAT / NINDS"
+        reason_codes:
+          negative: "B001_GFAP_NEGATIVE"
+          elevated: "B002_GFAP_ELEVATED"
+          critical: "B003_GFAP_CRITICAL"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+      - id: uchl1_pg_ml
+        label: "UCH-L1"
+        unit: "pg/mL"
+        type: float
+        ct_threshold: 360.0
+        analyte_status: clinical_use
+        preferred_assays: [abbott_i_stat, biomerieux_vidas]
+        threshold_source: "Abbott i-STAT / NINDS"
+        reason_codes:
+          negative: "B004_UCHL1_NEGATIVE"
+          elevated: "B004_UCHL1_ELEVATED"
+          critical: "B005_UCHL1_CRITICAL"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: s100b_ug_l
+        label: "S100B"
+        unit: "ug/L"
+        type: float
+        analyte_status: emerging
+        threshold_source: "Context-dependent; not a universal CT gate in this stack"
+        reason_codes:
+          elevated: "B006_S100B_ELEVATED"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: nfl_pg_ml
+        label: "Neurofilament Light Chain (NfL)"
+        unit: "pg/mL"
+        type: float
+        analyte_status: research
+        threshold_source: "No canonical acute CT triage threshold"
+        reason_codes:
+          elevated: "B007_NFL_ELEVATED"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: nse_ng_ml
+        label: "Neuron-Specific Enolase (NSE)"
+        unit: "ng/mL"
+        type: float
+        analyte_status: research
+        threshold_source: "Context-dependent"
+        reason_codes:
+          elevated: "B008_NSE_ELEVATED"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: total_tau_pg_ml
+        label: "Total Tau"
+        unit: "pg/mL"
+        type: float
+        analyte_status: research
+        threshold_source: "Context-dependent"
+        reason_codes:
+          elevated: "B009_TAU_ELEVATED"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: p_tau_217_pg_ml
+        label: "Phosphorylated Tau (p-tau-217)"
+        unit: "pg/mL"
+        type: float
+        analyte_status: research
+        threshold_source: "No acute CT triage threshold; late-effects/phenotyping utility"
+        reason_codes:
+          elevated: "B010_PTAU217_ELEVATED"
+        terminology_mappings:
+          fhir_observation_code: null
+          omop_concept_id: null
+
+      - id: biomarker_time_hours
+        label: "Time from Injury to Sample"
+        unit: hours
+        type: float
+        action_window: 12.0
+        interpretation_note: "If sampled outside 12h, apply caution in CT triage threshold interpretation"
+
+  imaging:
+    id: "I"
+    label: "Imaging Channel"
+    description: "CT and MRI findings, availability context"
+    variables:
+      - id: imaging_available
+        label: "Imaging Available"
+        type: boolean
+      - id: imaging_status
+        label: "Imaging Status"
+        type: categorical
+        values: ["available", "unavailable", "pending", "contraindicated"]
+      - id: ct_findings
+        label: "CT Findings"
+        type: list
+        item_type: string
+      - id: mri_findings
+        label: "MRI Findings"
+        type: list
+        item_type: string
+      - id: marshall_grade
+        label: "Marshall CT Classification"
+        type: integer
+        range: [1, 6]
+
+  modifier:
+    id: "M"
+    label: "Modifier Channel"
+    description: "Patient modifiers affecting clinical interpretation"
+    variables:
+      - id: age_years
+        label: "Age"
+        unit: years
+        type: integer
+      - id: mechanism_of_injury
+        label: "Mechanism of Injury"
+        type: categorical
+        values: ["fall", "rta", "assault", "sport", "blast", "other"]
+      - id: anticoagulant_use
+        label: "Anticoagulant Use"
+        type: boolean
+      - id: intoxication
+        label: "Intoxication"
+        type: boolean
+      - id: sedation
+        label: "Sedation"
+        type: boolean
+      - id: intubated
+        label: "Intubated"
+        type: boolean
+      - id: coagulopathy
+        label: "Coagulopathy"
+        type: boolean
+
+severity_classification:
+  mild:
+    gcs_range: [13, 15]
+    label: "Mild TBI"
+  moderate:
+    gcs_range: [9, 12]
+    label: "Moderate TBI"
+  severe:
+    gcs_range: [3, 8]
+    label: "Severe TBI"

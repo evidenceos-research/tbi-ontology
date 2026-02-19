@@ -1,0 +1,712 @@
+# Temporal Phases Ontology
+# NINDS TBI Reclassification temporal framework
+# Aligned with temporal-phase-router.ts
+#
+# WG3 Biomarker Kinetics Integration (Feb 2026):
+#   - Full 7-analyte panel kinetics per phase (GFAP, UCH-L1, S100B, NfL, NSE, tau, p-tau-217)
+#   - Granular timepoint schema within each phase
+#   - Serial sampling protocols per severity tier
+#   - Age-specific reference range scaffolds
+#   - Assay platform linkage (cross-ref: provenance.yaml)
+#   - Dataset-specific collection schedules (TRACK-TBI, CENTER-TBI, ALERT-TBI)
+
+version: "3.0.0"
+last_updated: "2026-02-15"
+source: "NINDS TBI Reclassification 2025; WG3 Biomarker Consensus"
+
+schema_contract:
+  canonical_phase_ids: [acute_0_24h, subacute_1_30d, initial_outcome_30d_12m, late_effects_gt1y]
+  canonical_analyte_ids: [gfap, uchl1, s100b, nfl, nse, total_tau, p_tau_217]
+  cross_file_alignment:
+    imaging_cdes_temporal_reference: true
+    cbim_framework_biomarker_channel: true
+    provenance_assay_platforms: true
+
+# =============================================================================
+# BIOMARKER KINETICS — Full 7-analyte panel
+# Source: WG3 Bazarian/Mondello consensus; TRACK-TBI; CENTER-TBI published data
+# Cross-reference: cbim_framework.yaml biomarker channel variables
+# =============================================================================
+biomarker_kinetics:
+  gfap:
+    id: "gfap"
+    label: "Glial Fibrillary Acidic Protein"
+    analyte_status: clinical_use
+    cellular_source: "Astrocytes (intermediate filament protein)"
+    injury_signal: "Astrocytic membrane disruption, BBB breakdown"
+    kinetics:
+      release_onset_hours: 1
+      peak_hours: [12, 24]
+      peak_range_note: "Severity-dependent; moderate peaks ~12h, severe peaks ~20-24h"
+      clearance_half_life_hours: [24, 36]
+      return_to_baseline_hours: [72, 120]
+      severity_modulation:
+        mild: { cmax_typical_pg_ml: [50, 200], peak_hours: [8, 16] }
+        moderate: { cmax_typical_pg_ml: [200, 2000], peak_hours: [12, 20] }
+        severe: { cmax_typical_pg_ml: [2000, 50000], peak_hours: [16, 24] }
+    ct_decision_threshold:
+      value: 30.0
+      unit: "pg/mL"
+      assay_platform: "abbott_i_stat_tbi_plasma"
+      optimal_sample_window_hours: [0, 12]
+      regulatory_clearance: "FDA 510(k) K203170"
+      cross_ref: "provenance.yaml#threshold_provenance.gfap_ct_threshold"
+    secondary_rise:
+      description: "Secondary GFAP elevation may indicate delayed injury (contusion expansion, secondary ischemia)"
+      clinical_action: "If GFAP re-rises >48h post-injury, reassess with repeat imaging"
+    references:
+      - "Bazarian JJ et al. Lancet Neurol 2021"
+      - "Okonkwo DO et al. Lancet Neurol 2020 (TRACK-TBI)"
+      - "Czeiter E et al. Lancet Neurol 2020 (CENTER-TBI)"
+
+  uchl1:
+    id: "uchl1"
+    label: "Ubiquitin C-Terminal Hydrolase L1"
+    analyte_status: clinical_use
+    cellular_source: "Neurons (cytoplasmic enzyme)"
+    injury_signal: "Neuronal cell body damage"
+    kinetics:
+      release_onset_hours: 0.5
+      peak_hours: [6, 12]
+      peak_range_note: "Earlier and more transient than GFAP"
+      clearance_half_life_hours: [7, 9]
+      return_to_baseline_hours: [24, 48]
+      severity_modulation:
+        mild: { cmax_typical_pg_ml: [100, 500], peak_hours: [4, 8] }
+        moderate: { cmax_typical_pg_ml: [500, 2000], peak_hours: [6, 10] }
+        severe: { cmax_typical_pg_ml: [2000, 10000], peak_hours: [8, 12] }
+    ct_decision_threshold:
+      value: 360.0
+      unit: "pg/mL"
+      assay_platform: "abbott_i_stat_tbi_plasma"
+      optimal_sample_window_hours: [0, 12]
+      regulatory_clearance: "FDA 510(k) K203170"
+      cross_ref: "provenance.yaml#threshold_provenance.uchl1_ct_threshold"
+    references:
+      - "Bazarian JJ et al. Lancet Neurol 2021"
+      - "Papa L et al. JAMA Neurol 2016"
+
+  s100b:
+    id: "s100b"
+    label: "S100 Calcium-Binding Protein B"
+    analyte_status: emerging
+    cellular_source: "Astrocytes, oligodendrocytes, Schwann cells, adipocytes, chondrocytes"
+    injury_signal: "Astrocytic injury; also elevated by extracranial sources (long bone fractures, multi-system trauma)"
+    kinetics:
+      release_onset_hours: 0.25
+      peak_hours: [1, 6]
+      peak_range_note: "Hyperacute marker; fastest to rise and fall of all TBI biomarkers"
+      clearance_half_life_hours: [0.5, 2]
+      return_to_baseline_hours: [12, 24]
+      severity_modulation:
+        mild: { cmax_typical_ug_l: [0.1, 0.5], peak_hours: [1, 3] }
+        moderate: { cmax_typical_ug_l: [0.5, 2.0], peak_hours: [2, 4] }
+        severe: { cmax_typical_ug_l: [2.0, 20.0], peak_hours: [3, 6] }
+    confounders:
+      - source: "Long bone fractures"
+        effect: "Significant elevation from extracranial S100B release"
+        mitigation: "Use in combination with GFAP for brain-specificity"
+      - source: "Multi-system trauma"
+        effect: "False positive for brain injury"
+        mitigation: "S100B alone insufficient; pair with brain-specific marker"
+      - source: "Melanoma"
+        effect: "Chronic S100B elevation"
+        mitigation: "Document oncologic history"
+    clinical_decision_note: >
+      NOT a standalone CT gate in this stack due to poor specificity from
+      extracranial sources. European guidelines (SNC-2012) use S100B <0.10 ug/L
+      to rule out CT need in mild TBI, but this is context-dependent.
+    references:
+      - "Undén J, Romner B. Neurosurgery 2010"
+      - "Thelin EP et al. PLoS ONE 2017 (meta-analysis)"
+      - "Mondello S et al. Ann Neurol 2021"
+
+  nfl:
+    id: "nfl"
+    label: "Neurofilament Light Chain"
+    analyte_status: research
+    cellular_source: "Large-caliber myelinated axons (neurofilament structural protein)"
+    injury_signal: "Axonal damage; the most specific axonal injury biomarker in blood"
+    kinetics:
+      release_onset_hours: 24
+      peak_hours: [168, 336]
+      peak_range_note: "Delayed peak at 7-14 days; reflects ongoing axonal degeneration, not acute release"
+      clearance_half_life_weeks: [3, 5]
+      return_to_baseline_months: [3, 12]
+      persistence_note: "NfL may remain elevated for months in severe TBI; slow clearance reflects ongoing neurodegeneration"
+      severity_modulation:
+        mild: { cmax_typical_pg_ml: [10, 50], peak_days: [5, 10] }
+        moderate: { cmax_typical_pg_ml: [50, 500], peak_days: [7, 14] }
+        severe: { cmax_typical_pg_ml: [500, 10000], peak_days: [10, 21] }
+    tapvi_correlation:
+      description: "NfL is the most specific blood-based correlate of TAPVI lesion burden on MRI"
+      evidence: "Patients with widespread TAPVI distribution show highest NfL peaks"
+      cross_ref: "imaging_cdes.yaml#supplementary_cdes.tapvi.distribution"
+    clinical_decision_note: >
+      No acute CT triage threshold. Primary utility is subacute-to-chronic
+      prognostication and monitoring. Rising NfL trajectory >7 days suggests
+      ongoing secondary injury or axonal degeneration.
+    references:
+      - "Shahim P et al. Lancet Neurol 2020"
+      - "Zetterberg H et al. Nature Reviews Neurol 2022"
+      - "Newcombe VFJ et al. Brain 2022"
+
+  nse:
+    id: "nse"
+    label: "Neuron-Specific Enolase"
+    analyte_status: research
+    cellular_source: "Neuronal cytoplasm; also present in red blood cells and platelets"
+    injury_signal: "Neuronal damage; confounded by hemolysis"
+    kinetics:
+      release_onset_hours: 2
+      peak_hours: [12, 36]
+      clearance_half_life_hours: [24, 48]
+      return_to_baseline_hours: [72, 120]
+      severity_modulation:
+        mild: { cmax_typical_ng_ml: [10, 25], peak_hours: [8, 18] }
+        moderate: { cmax_typical_ng_ml: [25, 50], peak_hours: [12, 24] }
+        severe: { cmax_typical_ng_ml: [50, 200], peak_hours: [18, 36] }
+    confounders:
+      - source: "Hemolysis"
+        effect: "Significant false elevation from RBC lysis during sample handling"
+        mitigation: "Reject hemolyzed samples; hemolysis index must be documented"
+      - source: "Neuroendocrine tumors"
+        effect: "Chronic NSE elevation"
+        mitigation: "Document oncologic history"
+    clinical_decision_note: >
+      Limited standalone utility in TBI due to hemolysis confounding.
+      Prognostic value in hypoxic-ischemic brain injury better established
+      than in TBI. May complement panel approaches.
+    references:
+      - "Böhmer AE et al. Neurosci Biobehav Rev 2011"
+      - "Mondello S et al. J Neurotrauma 2014"
+
+  total_tau:
+    id: "total_tau"
+    label: "Total Tau Protein"
+    analyte_status: research
+    cellular_source: "Neuronal axons (microtubule-associated protein)"
+    injury_signal: "Axonal injury and neurodegeneration"
+    kinetics:
+      release_onset_hours: 6
+      peak_hours: [24, 72]
+      peak_range_note: "Intermediate kinetics between UCH-L1 (fast) and NfL (slow)"
+      clearance_half_life_hours: [24, 48]
+      return_to_baseline_days: [7, 30]
+      severity_modulation:
+        mild: { cmax_typical_pg_ml: [1, 10], peak_hours: [12, 36] }
+        moderate: { cmax_typical_pg_ml: [10, 50], peak_hours: [24, 48] }
+        severe: { cmax_typical_pg_ml: [50, 500], peak_hours: [36, 72] }
+    references:
+      - "Rubenstein R et al. JAMA Neurol 2017"
+      - "Shahim P et al. Neurology 2020"
+
+  p_tau_217:
+    id: "p_tau_217"
+    label: "Phosphorylated Tau 217"
+    analyte_status: research
+    cellular_source: "Neuronal axons (phosphorylated isoform of tau)"
+    injury_signal: "Chronic neurodegeneration and tau pathology; TBI-to-CTE transition marker"
+    kinetics:
+      release_onset_hours: 48
+      peak_phase: "initial_outcome_30d_12m"
+      peak_range_note: "Not a hyperacute marker. Emerges in subacute-to-chronic phase. May persist/rise chronically."
+      clearance: "Unknown — limited TBI-specific longitudinal PK data available"
+      chronic_trajectory: "May continue rising in patients developing chronic tau pathology (CTE phenotype)"
+    clinical_decision_note: >
+      No acute CT triage threshold. Primary utility is phenotyping late
+      effects and CTE risk stratification. p-tau-217 has shown high accuracy
+      for distinguishing AD from non-AD in the general neurodegeneration
+      literature; TBI-specific validation is ongoing.
+    references:
+      - "Ashton NJ et al. JAMA 2024 (AD validation)"
+      - "Stern RA et al. JAMA Neurol 2019 (p-tau in CTE)"
+      - "Alosco ML et al. Alzheimer's & Dementia 2023"
+
+# =============================================================================
+# TEMPORAL PHASES — with integrated biomarker kinetics per phase
+# =============================================================================
+phases:
+  acute:
+    id: "acute_0_24h"
+    label: "Acute Phase"
+    time_range:
+      start_hours: 0
+      end_hours: 24
+    description: "Immediate post-injury period. Primary injury established; secondary injury cascade begins."
+    clinical_priorities:
+      - "Airway, breathing, circulation stabilization"
+      - "GCS assessment and serial monitoring"
+      - "CT imaging decision (biomarker-guided if available)"
+      - "ICP monitoring initiation if indicated"
+      - "Neurosurgical intervention if mass lesion"
+
+    # Granular sub-phase timepoints within acute
+    granular_timepoints:
+      hyperacute:
+        range_hours: [0, 6]
+        label: "Hyperacute (0-6h)"
+        biomarker_state:
+          gfap: "Rising — pre-peak; sample within this window for CT decision"
+          uchl1: "Approaching peak"
+          s100b: "At or near peak — hyperacute window is S100B's primary utility"
+          nfl: "Not yet detectable in blood"
+          nse: "Early rise"
+        clinical_note: "Optimal biomarker sampling window for CT-triage decision (0-12h)"
+      early_acute:
+        range_hours: [6, 12]
+        label: "Early Acute (6-12h)"
+        biomarker_state:
+          gfap: "Rising toward peak"
+          uchl1: "At or near peak; beginning clearance"
+          s100b: "Clearing rapidly — may already be below threshold"
+          nfl: "Still below detection limit in most patients"
+          nse: "Rising"
+        clinical_note: "Last reliable window for biomarker-guided CT decision"
+      late_acute:
+        range_hours: [12, 24]
+        label: "Late Acute (12-24h)"
+        biomarker_state:
+          gfap: "At peak or beginning clearance"
+          uchl1: "In clearance phase — interpret with caution for CT decision"
+          s100b: "Approaching baseline — limited acute utility"
+          nfl: "Beginning to appear in severe injuries"
+          nse: "Approaching peak"
+        clinical_note: "GFAP most informative; UCH-L1 and S100B clearing"
+
+    biomarker_sampling_protocol:
+      recommended_draws:
+        - time_hours: 0
+          label: "Admission / Time Zero"
+          priority: "critical"
+          analytes: [gfap, uchl1, s100b]
+          note: "Baseline; pair with GCS and clinical assessment"
+        - time_hours: 6
+          label: "6-hour follow-up"
+          priority: "recommended"
+          analytes: [gfap, uchl1]
+          note: "UCH-L1 approaching peak; GFAP trending upward"
+        - time_hours: 12
+          label: "12-hour follow-up"
+          priority: "recommended"
+          analytes: [gfap, uchl1]
+          note: "Last point in optimal CT-triage window; GFAP at/near peak"
+        - time_hours: 24
+          label: "24-hour follow-up"
+          priority: "if_monitored"
+          analytes: [gfap, nse]
+          note: "Phase transition point; GFAP peak confirmation"
+
+    model_considerations:
+      - "Highest rate of physiological change"
+      - "Most critical for Neural ODE trajectory initialization"
+      - "Biomarker kinetics in release phase"
+      - "S100B peaks and clears within this phase — hyperacute-only window"
+      - "UCH-L1 peaks and begins clearing — rapid kinetics"
+
+  subacute:
+    id: "subacute_1_30d"
+    label: "Subacute Phase"
+    time_range:
+      start_hours: 24
+      end_hours: 720
+    description: "Secondary injury evolution. Edema peaks, ICP management critical. NfL begins rising as axonal degeneration progresses."
+    clinical_priorities:
+      - "ICP/CPP management optimization"
+      - "Serial neurological assessment"
+      - "Nutrition and metabolic support"
+      - "Early rehabilitation assessment"
+      - "Prognostication discussions"
+      - "NfL trend monitoring for axonal injury burden"
+
+    granular_timepoints:
+      early_subacute:
+        range_hours: [24, 72]
+        label: "Early Subacute (24-72h)"
+        biomarker_state:
+          gfap: "Clearance phase; secondary rise may indicate delayed injury"
+          uchl1: "Approaching baseline"
+          s100b: "At baseline unless extracranial sources"
+          nfl: "Beginning to rise in moderate-severe injuries"
+          total_tau: "Approaching peak"
+        clinical_note: "GFAP secondary rise is a red flag for contusion expansion"
+      mid_subacute:
+        range_hours: [72, 168]
+        label: "Mid Subacute (3-7d)"
+        biomarker_state:
+          gfap: "Cleared or clearing; secondary peaks possible"
+          uchl1: "At baseline"
+          nfl: "Rising — reflecting ongoing axonal degeneration"
+          total_tau: "In clearance phase"
+        clinical_note: "NfL trend now informative for injury burden"
+      late_subacute:
+        range_hours: [168, 720]
+        label: "Late Subacute (7-30d)"
+        biomarker_state:
+          gfap: "At baseline unless complications"
+          nfl: "At or approaching peak (7-14 days); magnitude correlates with TAPVI burden"
+          total_tau: "Clearing"
+          p_tau_217: "May begin to appear in severe injuries"
+        clinical_note: "NfL peak is the primary biomarker signal in this window"
+
+    biomarker_clearance_kinetics:
+      gfap:
+        half_life_hours: [24, 36]
+        expected_baseline_return_hours: [72, 120]
+      uchl1:
+        half_life_hours: [7, 9]
+        expected_baseline_return_hours: [24, 48]
+      s100b:
+        half_life_hours: [0.5, 2]
+        expected_baseline_return_hours: [12, 24]
+
+    biomarker_sampling_protocol:
+      recommended_draws:
+        - time_hours: 48
+          label: "48-hour follow-up"
+          priority: "recommended"
+          analytes: [gfap, nfl]
+          note: "Check for GFAP secondary rise; NfL baseline for trend"
+        - time_days: 3
+          label: "Day 3"
+          priority: "if_icu"
+          analytes: [gfap, nfl, total_tau]
+          note: "GFAP secondary rise monitoring; tau approaching peak"
+        - time_days: 7
+          label: "Day 7"
+          priority: "recommended"
+          analytes: [nfl]
+          note: "NfL rising; first informative NfL measurement"
+        - time_days: 14
+          label: "Day 14"
+          priority: "recommended"
+          analytes: [nfl]
+          note: "NfL at or near peak; magnitude correlates with outcome"
+        - time_days: 30
+          label: "Day 30"
+          priority: "if_available"
+          analytes: [nfl, p_tau_217]
+          note: "Phase transition; NfL trajectory for prognostication"
+
+    model_considerations:
+      - "Secondary injury peaks (edema, ischemia)"
+      - "Autoregulation assessment critical"
+      - "GFAP/UCH-L1 in clearance phase — secondary GFAP rise is informative"
+      - "NfL rise onset — critical for TAPVI-correlated prognostication"
+      - "Total tau peaks and clears — intermediate kinetics"
+
+  initial_outcome:
+    id: "initial_outcome_30d_12m"
+    label: "Initial Outcome Phase"
+    time_range:
+      start_hours: 720
+      end_hours: 8760
+    description: "Recovery trajectory established. Rehabilitation focus. NfL clearing reflects resolution of active axonal degeneration."
+    clinical_priorities:
+      - "Functional outcome assessment (GOSE)"
+      - "Cognitive rehabilitation"
+      - "Return-to-activity planning"
+      - "Mental health screening"
+      - "NfL trajectory monitoring for recovery confirmation"
+
+    biomarker_state:
+      gfap: "At baseline unless chronic complications"
+      uchl1: "At baseline"
+      s100b: "At baseline"
+      nfl: "Clearing — trajectory slope is prognostic (fast clearance = better outcome)"
+      total_tau: "At or approaching baseline"
+      p_tau_217: "May be elevated in patients developing chronic tau pathology"
+
+    biomarker_sampling_protocol:
+      recommended_draws:
+        - time_months: 3
+          label: "3-month follow-up"
+          priority: "recommended"
+          analytes: [nfl, p_tau_217]
+          note: "NfL clearance trajectory; p-tau-217 baseline for chronic monitoring"
+        - time_months: 6
+          label: "6-month follow-up"
+          priority: "recommended"
+          analytes: [nfl, p_tau_217]
+          note: "Paired with GOSE assessment"
+        - time_months: 12
+          label: "12-month follow-up"
+          priority: "recommended"
+          analytes: [nfl, p_tau_217]
+          note: "Phase transition; NfL should be near baseline in recovering patients"
+
+    outcome_measures:
+      - id: gose
+        label: "Glasgow Outcome Scale Extended"
+        range: [1, 8]
+      - id: drs
+        label: "Disability Rating Scale"
+        range: [0, 29]
+    model_considerations:
+      - "Trajectory prediction validation window"
+      - "Outcome prediction models applicable"
+      - "NfL clearance rate as outcome predictor"
+      - "p-tau-217 emergence as late-effects risk marker"
+
+  late_effects:
+    id: "late_effects_gt1y"
+    label: "Late Effects Phase"
+    time_range:
+      start_hours: 8760
+      end_hours: null
+    description: "Long-term sequelae. Chronic effects monitoring. p-tau-217 is the primary biomarker of interest."
+    clinical_priorities:
+      - "Chronic symptom management"
+      - "Neurodegeneration screening"
+      - "Quality of life assessment"
+      - "CTE risk monitoring (repetitive TBI)"
+      - "p-tau-217 longitudinal tracking"
+
+    biomarker_state:
+      gfap: "At baseline"
+      uchl1: "At baseline"
+      nfl: "At baseline in recovered patients; persistently elevated = ongoing neurodegeneration"
+      p_tau_217: "Key monitoring marker — rising trajectory may indicate CTE/AD pathology"
+
+    biomarker_sampling_protocol:
+      recommended_draws:
+        - time_years: 1
+          label: "Annual screening"
+          priority: "if_symptomatic"
+          analytes: [nfl, p_tau_217]
+          note: "Baseline for long-term monitoring in patients with persistent symptoms"
+        - time_years: 2
+          label: "2-year follow-up"
+          priority: "if_symptomatic"
+          analytes: [nfl, p_tau_217]
+          note: "Trend comparison for neurodegeneration screening"
+
+    model_considerations:
+      - "Long-horizon prediction validation"
+      - "Population-level trajectory clustering"
+      - "p-tau-217 as CTE phenotype discriminator"
+      - "NfL persistence as neurodegeneration indicator"
+
+# =============================================================================
+# TRANSITION CRITERIA
+# =============================================================================
+transition_criteria:
+  acute_to_subacute:
+    criteria:
+      - "24 hours post-injury"
+      - "Initial stabilization achieved"
+    biomarker_signals:
+      - "UCH-L1 transitioning from peak to clearance"
+      - "GFAP at or past peak"
+      - "S100B already at baseline"
+  subacute_to_initial_outcome:
+    criteria:
+      - "30 days post-injury"
+      - "Acute ICU phase completed"
+    biomarker_signals:
+      - "NfL past peak and in clearance"
+      - "GFAP at baseline"
+      - "Total tau at baseline"
+  initial_outcome_to_late_effects:
+    criteria:
+      - "12 months post-injury"
+      - "Primary recovery plateau reached"
+    biomarker_signals:
+      - "NfL near or at baseline (if recovering)"
+      - "p-tau-217 trajectory established for chronic monitoring"
+
+# =============================================================================
+# AGE-SPECIFIC REFERENCE RANGES
+# Scaffold for pediatric, adult, and geriatric thresholds
+# Status: research — insufficient published data for most analytes
+# =============================================================================
+age_specific_ranges:
+  _note: >
+    Age-specific reference ranges are critical for clinical implementation
+    but remain poorly characterized in the literature for most TBI biomarkers.
+    GFAP and UCH-L1 have emerging pediatric data from TRACK-TBI Pilot Peds.
+    NfL has well-established age-dependent norms in the neurodegeneration
+    literature that must be accounted for in TBI interpretation.
+
+  pediatric_lt_2y:
+    population: "Infants and toddlers (<2 years)"
+    known_differences:
+      gfap: "Higher baseline GFAP in neonates; age-adjusted thresholds needed"
+      uchl1: "Limited data; Abbott i-STAT not validated <18y"
+      nfl: "Higher baseline NfL in developing brain; normative data limited"
+    status: "insufficient_data"
+    reference: "Mondello S et al. JAMA Pediatrics 2020"
+
+  pediatric_2_17y:
+    population: "Children and adolescents (2-17 years)"
+    known_differences:
+      gfap: "Mild TBI in children may have higher GFAP relative to injury severity"
+      uchl1: "Sport concussion data emerging (youth athletes)"
+      s100b: "S100B may be elevated in active skeletal growth"
+      nfl: "Baseline lower than adults; sport concussion data emerging"
+    status: "emerging_data"
+    reference: "Bazarian JJ et al. JAMA Network Open 2021 (pediatric)"
+
+  adult_18_64y:
+    population: "Adults (18-64 years)"
+    known_differences:
+      note: "Primary validation population for Abbott i-STAT and most published data"
+    status: "reference_population"
+
+  geriatric_gt65y:
+    population: "Older adults (>65 years)"
+    known_differences:
+      gfap: "Higher baseline GFAP with age; may need age-adjusted thresholds"
+      nfl: "NfL rises with age even without TBI; age-corrected z-scores recommended"
+      p_tau_217: "Must differentiate TBI-related elevation from age-related AD pathology"
+      general: "Anticoagulant use common — modifies bleeding risk and biomarker interpretation"
+    status: "undercharacterized"
+    reference: "Abdelhak A et al. Neurology 2022 (NfL age norms)"
+
+# =============================================================================
+# ASSAY PLATFORM LINKAGE
+# Cross-reference: provenance.yaml#assay_platform_provenance
+# =============================================================================
+assay_platform_kinetics_context:
+  _note: >
+    Biomarker kinetics are platform-dependent. Half-lives and thresholds
+    in this file are primarily characterized on the Abbott i-STAT platform.
+    bioMerieux VIDAS may have different cutoff values due to assay methodology
+    differences. Always check provenance.yaml for platform-specific context.
+
+  abbott_i_stat_tbi_plasma:
+    analytes_validated: [gfap, uchl1]
+    kinetics_characterized: true
+    ct_thresholds_bound: true
+    regulatory_clearance: "FDA 510(k) K203170"
+
+  biomerieux_vidas_tbi:
+    analytes_validated: [gfap, uchl1]
+    kinetics_characterized: "partial — cutoffs may differ from i-STAT"
+    ct_thresholds_bound: "site-specific validation recommended"
+    regulatory_clearance: "FDA 510(k) (2024)"
+
+  simoa_quanterix:
+    analytes: [gfap, uchl1, nfl, total_tau, p_tau_217]
+    kinetics_characterized: "research context — ultrasensitive platform"
+    ct_thresholds_bound: false
+    use_context: "Research and clinical studies; not point-of-care"
+    note: "Most NfL and tau kinetics data derived from Simoa platform"
+
+  elecsys_roche:
+    analytes: [nfl, p_tau_217]
+    kinetics_characterized: "emerging"
+    use_context: "High-throughput clinical lab"
+    note: "p-tau-217 on Elecsys has shown high concordance with PET amyloid/tau"
+
+# =============================================================================
+# DATASET COLLECTION SCHEDULES
+# Maps biomarker sampling in key TBI datasets to temporal phases
+# Critical for synthetic data generation: generates realistic sampling patterns
+# =============================================================================
+dataset_collection_schedules:
+  track_tbi:
+    name: "TRACK-TBI"
+    biomarker_timepoints:
+      - hours_post_injury: 0
+        analytes: [gfap, uchl1, s100b, nfl, total_tau]
+        phase: "acute_0_24h"
+        note: "Enrollment / ED presentation"
+      - hours_post_injury: 24
+        analytes: [gfap, uchl1]
+        phase: "acute_0_24h"
+        note: "24-hour sample"
+      - days_post_injury: 14
+        analytes: [nfl]
+        phase: "subacute_1_30d"
+        note: "2-week follow-up (subset of patients)"
+      - months_post_injury: 3
+        analytes: [nfl]
+        phase: "initial_outcome_30d_12m"
+        note: "3-month outcome visit"
+      - months_post_injury: 6
+        analytes: [nfl]
+        phase: "initial_outcome_30d_12m"
+        note: "6-month outcome visit (paired with GOSE)"
+      - months_post_injury: 12
+        analytes: [nfl, p_tau_217]
+        phase: "initial_outcome_30d_12m"
+        note: "12-month outcome visit (paired with GOSE)"
+    reference: "Okonkwo DO et al. JAMA Neurol 2020"
+
+  center_tbi:
+    name: "CENTER-TBI"
+    biomarker_timepoints:
+      - hours_post_injury: 0
+        analytes: [gfap, uchl1, s100b, nfl, total_tau, nse]
+        phase: "acute_0_24h"
+        note: "Enrollment"
+      - hours_post_injury: 12
+        analytes: [gfap, uchl1, s100b]
+        phase: "acute_0_24h"
+        note: "12-hour sample"
+      - hours_post_injury: 24
+        analytes: [gfap, uchl1, s100b]
+        phase: "acute_0_24h"
+        note: "24-hour sample"
+      - hours_post_injury: 48
+        analytes: [gfap, s100b]
+        phase: "subacute_1_30d"
+        note: "48-hour sample"
+      - hours_post_injury: 72
+        analytes: [gfap, s100b]
+        phase: "subacute_1_30d"
+        note: "72-hour sample"
+      - days_post_injury: 7
+        analytes: [nfl]
+        phase: "subacute_1_30d"
+        note: "Day 7 (subset)"
+      - months_post_injury: 3
+        analytes: [nfl, gfap]
+        phase: "initial_outcome_30d_12m"
+        note: "3-month follow-up"
+      - months_post_injury: 6
+        analytes: [nfl, gfap]
+        phase: "initial_outcome_30d_12m"
+        note: "6-month follow-up (paired with GOSE)"
+    reference: "Czeiter E et al. Lancet Neurol 2020"
+
+  alert_tbi:
+    name: "ALERT-TBI"
+    biomarker_timepoints:
+      - hours_post_injury: 0
+        analytes: [gfap, uchl1]
+        phase: "acute_0_24h"
+        note: "ED presentation — pivotal trial for Abbott i-STAT"
+      - hours_post_injury: 12
+        analytes: [gfap, uchl1]
+        phase: "acute_0_24h"
+        note: "12-hour sample"
+    reference: "Bazarian JJ et al. Lancet Neurol 2021"
+
+# =============================================================================
+# SERIAL MONITORING RULES
+# When to repeat biomarker draws and what trajectories mean clinically
+# =============================================================================
+serial_monitoring:
+  gfap_secondary_rise:
+    trigger: "GFAP re-elevation >50% above nadir after initial clearance"
+    time_window: "48-120h post-injury"
+    clinical_significance: "Contusion expansion, delayed ischemia, or new secondary insult"
+    action: "Repeat CT; clinical reassessment"
+    evidence_level: "Observational (TRACK-TBI, CENTER-TBI)"
+    reference: "Thelin EP et al. PLoS ONE 2017"
+
+  nfl_trajectory_monitoring:
+    trigger: "NfL sampled at >=2 timepoints (day 7 + day 14, or day 14 + month 3)"
+    clinical_significance: >
+      Rising NfL at day 14 correlates with TAPVI burden and worse 6-month GOSE.
+      Failure of NfL to decline by month 3 suggests ongoing neurodegeneration.
+    action: "Consider repeat MRI for TAPVI assessment; initiate neuroprotection discussion"
+    evidence_level: "Observational (TRACK-TBI, CENTER-TBI)"
+
+  icp_biomarker_correlation:
+    trigger: "ICP >22 mmHg with concurrent GFAP draw"
+    clinical_significance: "GFAP elevation concurrent with ICP crisis supports secondary injury"
+    action: "Integrate into Neural ODE multi-channel trajectory analysis"
+    cross_ref: "provenance.yaml#threshold_provenance.icp_treatment_threshold"
